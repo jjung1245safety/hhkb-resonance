@@ -1,0 +1,2004 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HHKB Resonance — 정적 속의 타건</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#F4F4F2">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="HHKB Resonance">
+<style>
+  :root {
+    --bg: #F4F4F2;
+    --bg-raised: #FBFBFA;
+    --ink: #2A2A2A;
+    --ink-soft: #8A8A8A;
+    --ink-faint: #BFBFBD;
+    --keycap: #3A3A3A;
+    --accent: #B8282E;
+    --sumi: #161616;
+    --hairline: #E2E2DF;
+    --correct: #2A2A2A;
+    --incorrect: #B8282E;
+    --incorrect-bg: rgba(184, 40, 46, 0.12);
+    --pending: #C4C4C1;
+    --gold: #A8884C;
+    --mono: 'SFMono-Regular', 'JetBrains Mono', 'D2Coding', 'Sarasa Mono K', 'Consolas', 'Menlo', monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--mono);
+    font-feature-settings: "liga" 0, "calt" 0;
+    overflow-x: hidden;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    padding: 28px 44px 0;
+    position: relative;
+    min-height: 100vh;
+  }
+
+  /* paper grain */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      radial-gradient(circle at 20% 30%, rgba(0,0,0,0.018) 1px, transparent 1px),
+      radial-gradient(circle at 70% 60%, rgba(0,0,0,0.012) 1px, transparent 1px);
+    background-size: 4px 4px, 7px 7px;
+    z-index: 1;
+  }
+
+  /* corner marks */
+  .corner-mark {
+    position: fixed;
+    width: 11px;
+    height: 11px;
+    z-index: 3;
+    pointer-events: none;
+    opacity: 0.5;
+  }
+  .corner-mark.tl { top: 18px; left: 18px; border-top: 1px solid var(--keycap); border-left: 1px solid var(--keycap); }
+  .corner-mark.tr { top: 18px; right: 18px; border-top: 1px solid var(--keycap); border-right: 1px solid var(--keycap); }
+  .corner-mark.bl { bottom: 18px; left: 18px; border-bottom: 1px solid var(--keycap); border-left: 1px solid var(--keycap); }
+  .corner-mark.br { bottom: 18px; right: 18px; border-bottom: 1px solid var(--keycap); border-right: 1px solid var(--keycap); }
+
+  /* ═══════ HEADER ═══════ */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--hairline);
+    position: relative;
+    z-index: 2;
+  }
+
+  .brand { display: flex; flex-direction: column; gap: 3px; }
+
+  .brand-mark {
+    font-size: 9.5px;
+    letter-spacing: 0.32em;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+
+  .brand-title {
+    font-size: 26px;
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    color: var(--sumi);
+    display: flex;
+    align-items: baseline;
+    gap: 11px;
+  }
+
+  .brand-title .accent-dot {
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    display: inline-block;
+    transform: translateY(-4px);
+  }
+
+  .brand-jp {
+    font-size: 10.5px;
+    color: var(--ink-faint);
+    letter-spacing: 0.14em;
+    margin-top: 1px;
+  }
+
+  .header-right { display: flex; align-items: center; gap: 24px; }
+
+  .category-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    background: var(--bg-raised);
+    padding: 2px;
+    border: 1px solid var(--hairline);
+    border-radius: 3px;
+    justify-content: flex-end;
+    max-width: 520px;
+  }
+
+  .cat-btn {
+    background: transparent;
+    border: none;
+    padding: 6px 11px;
+    font-family: inherit;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: var(--ink-soft);
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.18s ease;
+    border-radius: 2px;
+    white-space: nowrap;
+  }
+  .cat-btn.active { background: var(--keycap); color: var(--bg); }
+  .cat-btn:not(.active):hover { color: var(--ink); }
+
+  /* 검정 모드 버튼: 카테고리와 구분되는 강조 */
+  .exam-btn {
+    background: transparent;
+    border: none;
+    border-left: 1px solid var(--hairline);
+    padding: 6px 12px;
+    margin-left: 3px;
+    font-family: inherit;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    border-radius: 2px;
+    white-space: nowrap;
+  }
+  .exam-btn:hover { background: var(--accent); color: var(--bg); }
+
+  /* ═══════ STATS BAR ═══════ */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    margin: 18px 0 0;
+    border: 1px solid var(--hairline);
+    background: var(--bg-raised);
+    position: relative;
+    z-index: 2;
+  }
+
+  .stat {
+    padding: 14px 22px;
+    border-right: 1px solid var(--hairline);
+    position: relative;
+    overflow: hidden;
+  }
+  .stat:last-child { border-right: none; }
+
+  .stat-label {
+    font-size: 9px;
+    letter-spacing: 0.24em;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    margin-bottom: 5px;
+  }
+
+  .stat-value {
+    font-size: 30px;
+    font-weight: 300;
+    color: var(--sumi);
+    letter-spacing: -0.02em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stat-unit { font-size: 11px; color: var(--ink-faint); margin-left: 3px; font-weight: 400; }
+  .stat-mini { position: absolute; bottom: 7px; right: 11px; font-size: 8.5px; color: var(--ink-faint); letter-spacing: 0.08em; }
+
+  /* ═══════ PROGRESS BAR ═══════ */
+  .progress-wrap {
+    height: 2px;
+    background: var(--hairline);
+    position: relative;
+    z-index: 2;
+    margin-bottom: 0;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--keycap);
+    width: 0%;
+    transition: width 0.2s ease;
+  }
+
+  /* ═══════ MAIN TEXT AREA ═══════ */
+  .text-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 36px 0 20px;
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    min-height: 280px;
+  }
+
+  .text-inner { width: 100%; max-width: 1060px; }
+
+  .source-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 22px;
+  }
+
+  .source-tag {
+    font-size: 10px;
+    color: var(--ink-faint);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .source-tag::before { content: ''; width: 18px; height: 1px; background: var(--ink-faint); display: inline-block; }
+
+  .word-count {
+    font-size: 10px;
+    color: var(--ink-faint);
+    letter-spacing: 0.12em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .text-display {
+    font-size: 23px;
+    line-height: 1.95;
+    letter-spacing: 0.01em;
+    color: var(--pending);
+    width: 100%;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+    white-space: normal;
+    font-weight: 400;
+    position: relative;
+    min-height: 134px;
+  }
+
+  /* 장문(280자 이상) 지문: 글씨를 줄여 한눈에 들어오게 */
+  .text-display.longform {
+    font-size: 18px;
+    line-height: 1.85;
+  }
+
+  /* 단어 래퍼: inline-block이라 단어 내부에서는 절대 줄바꿈되지 않고,
+     줄바꿈은 항상 단어 사이에서만 일어난다 (monkeytype 방식).
+     white-space: pre 로 단어 꼬리의 공백 문자를 그대로 렌더링한다. */
+  .word {
+    display: inline-block;
+    white-space: pre;
+  }
+
+  .char {
+    position: relative;
+    transition: color 0.1s ease, background 0.1s ease;
+    display: inline;
+    border-radius: 2px;
+  }
+
+  /* 정타: 진한 먹색 */
+  .char.correct { color: var(--correct); }
+
+  /* 오타: 빨간색 + 배경. 사용자가 친 글자가 표시됨 */
+  .char.incorrect {
+    color: var(--incorrect);
+    background: var(--incorrect-bg);
+  }
+
+  /* 오타가 공백 위치일 때: 밑줄로 강조 */
+  .char.space.incorrect {
+    background: var(--incorrect-bg);
+    box-shadow: inset 0 -2px 0 var(--incorrect);
+  }
+
+  /* 누락(건너뛴) 위치 - 현재는 사용 안 하지만 예약 */
+  .char.skipped { color: var(--incorrect); opacity: 0.5; text-decoration: line-through; }
+
+  /* 아직 안 친 글자 */
+  .char.pending { color: var(--pending); }
+
+  /* 한글 조합 중인 글자 (ㄱ→가→값): 입력 중임을 보여주는 중립 강조 */
+  .char.composing {
+    color: var(--sumi);
+    background: rgba(168, 136, 76, 0.14);
+    box-shadow: inset 0 -2px 0 var(--gold);
+    border-radius: 2px;
+  }
+
+  /* 부드럽게 이동하는 커서 */
+  .cursor {
+    position: absolute;
+    width: 2.5px;
+    transition: transform 0.13s cubic-bezier(0.3, 0.7, 0.4, 1),
+                height 0.13s ease;
+    transform: translate(0, 0);
+    will-change: transform;
+    top: 0;
+    left: 0;
+    height: 28px;
+    pointer-events: none;
+  }
+  .cursor::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--accent);
+    border-radius: 2px;
+    transform-origin: center;
+    animation: cursor-heartbeat 1.5s ease-out infinite;
+  }
+
+  /* 심장박동 패턴 */
+  @keyframes cursor-heartbeat {
+    0%   { opacity: 0.35; transform: scaleY(1); }
+    7%   { opacity: 1.00; transform: scaleY(1.12); }
+    14%  { opacity: 0.5;  transform: scaleY(1); }
+    21%  { opacity: 0.9;  transform: scaleY(1.08); }
+    30%  { opacity: 0.35; transform: scaleY(1); }
+    100% { opacity: 0.35; transform: scaleY(1); }
+  }
+
+  /* 타이핑 중에는 박동 멈추고 선명하게 */
+  .cursor.typing::before { animation: none; opacity: 1; }
+
+  /* 제출 안내: 지문을 다 치면 나타난다.
+     visibility로 토글해 자리를 늘 차지하므로 레이아웃이 흔들리지 않는다. */
+  .submit-hint {
+    margin-top: 20px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-size: 10.5px;
+    letter-spacing: 0.16em;
+    color: var(--accent);
+    text-transform: uppercase;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+  }
+  .submit-hint.show {
+    visibility: visible;
+    opacity: 1;
+    animation: submit-breathe 1.8s ease-in-out infinite;
+  }
+  .submit-key {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 26px; height: 20px;
+    border: 1px solid var(--accent);
+    border-radius: 3px;
+    font-size: 11px;
+    box-shadow: 0 1px 0 rgba(184, 40, 46, 0.25);
+  }
+  @keyframes submit-breathe {
+    0%, 100% { opacity: 0.6; }
+    50%      { opacity: 1; }
+  }
+
+  /* ═══════ BOTTOM PANEL ═══════ */
+  .bottom-panel {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    border-top: 1px solid var(--hairline);
+    border-bottom: 1px solid var(--hairline);
+    background: var(--bg-raised);
+    margin-top: auto;
+    position: relative;
+    z-index: 2;
+  }
+
+  .waveform-section { padding: 14px 22px; border-right: 1px solid var(--hairline); }
+
+  .waveform-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 7px; }
+  .waveform-title { font-size: 9px; letter-spacing: 0.24em; color: var(--ink-soft); text-transform: uppercase; }
+  .waveform-legend { font-size: 9px; color: var(--ink-faint); letter-spacing: 0.08em; }
+  #waveform { display: block; width: 100%; height: 72px; }
+
+  .key-hint { padding: 14px 18px; display: flex; flex-direction: column; justify-content: center; gap: 9px; }
+  .hint-title { font-size: 9px; letter-spacing: 0.24em; color: var(--ink-soft); text-transform: uppercase; }
+  .hint-row { display: flex; align-items: center; gap: 9px; font-size: 10px; color: var(--ink); }
+  .keycap-mini {
+    background: var(--keycap); color: var(--bg);
+    padding: 3px 7px; border-radius: 2px;
+    font-size: 9px; letter-spacing: 0.04em; min-width: 36px; text-align: center;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.15); font-weight: 500;
+  }
+  .hint-desc { color: var(--ink-soft); font-size: 10px; letter-spacing: 0.03em; }
+
+  /* ── Fn Layer 배치도 ── */
+  #hintDefault { display: flex; flex-direction: column; gap: 9px; }
+  .fnwrap { display: flex; align-items: flex-end; gap: 12px; margin-top: 8px; }
+  .fnmap { display: flex; flex-direction: column; gap: 3px; }
+  .fnmap-row { display: flex; gap: 3px; }
+  .fnkey {
+    width: 38px; height: 26px;
+    border: 1px solid var(--hairline);
+    background: var(--bg);
+    border-radius: 3px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.08);
+    position: relative;
+  }
+  .fnkey b {
+    font-size: 12px; font-weight: 500;
+    color: var(--sumi); line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .fnkey i {
+    font-size: 7.5px; font-style: normal;
+    color: var(--ink-faint); letter-spacing: 0.06em;
+    margin-top: 1px;
+  }
+  .fnkey.blank { border-color: transparent; background: transparent; box-shadow: none; }
+  .fnkey.minus b { color: var(--ink-soft); }
+  /* 홈로우 강조 — 손가락 기준선 */
+  .fnmap-row.home .fnkey:not(.blank) {
+    border-color: var(--keycap);
+    background: var(--bg-raised);
+  }
+  .fnmap-row.home .fnkey b { color: var(--accent); }
+  .fnkey.wide { width: 84px; height: 26px; }
+  .fnmap-foot {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+  }
+  .fnmap-note {
+    font-size: 8.5px; color: var(--ink-faint);
+    letter-spacing: 0.04em; line-height: 1.5;
+  }
+
+  /* ═══════ FOOTER ═══════ */
+  .footer {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 0; font-size: 10px; color: var(--ink-faint);
+    letter-spacing: 0.14em; text-transform: uppercase;
+    position: relative; z-index: 2;
+  }
+  .footer-actions { display: flex; gap: 8px; }
+  .action-btn {
+    background: transparent; border: 1px solid var(--hairline);
+    padding: 8px 15px; font-family: inherit; font-size: 10px;
+    letter-spacing: 0.14em; color: var(--ink-soft); cursor: pointer;
+    text-transform: uppercase; transition: all 0.15s ease;
+  }
+  .action-btn:hover { background: var(--keycap); color: var(--bg); border-color: var(--keycap); }
+  .action-btn kbd { font-family: inherit; font-size: 9px; margin-left: 5px; opacity: 0.6; }
+
+  /* ═══════ HIDDEN INPUT ═══════ */
+  .hidden-input {
+    position: fixed; top: 50%; left: 50%;
+    width: 1px; height: 1px; opacity: 0;
+    border: none; outline: none; background: transparent;
+    caret-color: transparent; pointer-events: none; z-index: -1;
+    font-size: 16px;
+  }
+
+  /* focus hint */
+  .focus-hint {
+    position: fixed; inset: 0;
+    background: rgba(244, 244, 242, 0.72);
+    backdrop-filter: blur(3px);
+    display: none; justify-content: center; align-items: center;
+    z-index: 8; cursor: text;
+    /* 안내는 보여주기만 하고 클릭은 아래 요소로 통과시킨다.
+       (안내가 버튼 클릭을 가로채 두 번 눌러야 하던 문제 방지) */
+    pointer-events: none;
+  }
+  .focus-hint.show { display: flex; }
+  .focus-hint-text {
+    font-size: 12px; letter-spacing: 0.28em; color: var(--ink-soft);
+    text-transform: uppercase; padding: 16px 30px;
+    border: 1px solid var(--hairline); background: var(--bg-raised);
+  }
+
+  /* ═══════ COMPLETE OVERLAY ═══════ */
+  .complete-overlay {
+    position: fixed; inset: 0;
+    background: rgba(244, 244, 242, 0.97);
+    backdrop-filter: blur(8px);
+    display: none; justify-content: center; align-items: center;
+    z-index: 10; animation: fadeIn 0.35s ease;
+  }
+  .complete-overlay.show { display: flex; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  .complete-card {
+    background: var(--bg-raised);
+    border: 1px solid var(--hairline);
+    padding: 44px 56px; text-align: center; max-width: 600px;
+    animation: slideUp 0.45s ease;
+    position: relative;
+  }
+  @keyframes slideUp { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+  .complete-title { font-size: 10.5px; letter-spacing: 0.4em; color: var(--ink-soft); margin-bottom: 7px; text-transform: uppercase; }
+  .complete-jp { font-size: 22px; color: var(--sumi); margin-bottom: 30px; font-weight: 300; }
+
+  .complete-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-bottom: 24px; }
+  .complete-stat-label { font-size: 8.5px; letter-spacing: 0.22em; color: var(--ink-soft); margin-bottom: 5px; text-transform: uppercase; }
+  .complete-stat-value { font-size: 32px; font-weight: 300; color: var(--sumi); font-variant-numeric: tabular-nums; line-height: 1; }
+  .complete-stat-value .s-unit { font-size: 12px; color: var(--ink-faint); }
+  .complete-stat-value.accent { color: var(--accent); }
+
+  .complete-detail {
+    font-size: 11px; color: var(--ink-soft); letter-spacing: 0.04em;
+    padding: 16px 0; border-top: 1px solid var(--hairline);
+    margin-bottom: 24px; line-height: 1.7;
+  }
+  .complete-detail b { color: var(--ink); font-weight: 500; }
+
+  @media (max-width: 920px) {
+    body { padding: 20px 16px 0; }
+    .header { flex-direction: column; gap: 16px; }
+    .text-display { font-size: 19px; }
+    .bottom-panel { grid-template-columns: 1fr; }
+    .waveform-section { border-right: none; border-bottom: 1px solid var(--hairline); }
+    .stats-bar { grid-template-columns: repeat(2, 1fr); }
+    .stat:nth-child(2) { border-right: none; }
+    .stat:nth-child(1), .stat:nth-child(2) { border-bottom: 1px solid var(--hairline); }
+    .complete-stats { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="corner-mark tl"></div>
+<div class="corner-mark tr"></div>
+<div class="corner-mark bl"></div>
+<div class="corner-mark br"></div>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="brand">
+    <div class="brand-mark">Topre · 45g · Silenced</div>
+    <div class="brand-title">
+      <span class="accent-dot"></span>
+      HHKB Resonance
+    </div>
+    <div class="brand-jp">정적 속의 타건 — Practice in Stillness</div>
+  </div>
+  <div class="header-right">
+    <div class="category-selector" id="categorySelector">
+      <button class="cat-btn active" data-cat="mixed">MIXED</button>
+      <button class="cat-btn" data-cat="quote">명언</button>
+      <button class="cat-btn" data-cat="proverb">속담</button>
+      <button class="cat-btn" data-cat="longform">장문</button>
+      <button class="cat-btn" data-cat="safety">안전</button>
+      <button class="cat-btn" data-cat="business">실무</button>
+      <button class="cat-btn" data-cat="number">숫자</button>
+      <button class="cat-btn" data-cat="fnlayer">FN숫자</button>
+      <button class="cat-btn" data-cat="law">법령</button>
+      <button class="cat-btn" data-cat="english">ENG</button>
+      <button class="cat-btn" data-cat="tech">TECH</button>
+      <button class="cat-btn" data-cat="stock">STOCK</button>
+      <button class="cat-btn" data-cat="keyboard">KEY</button>
+      <button class="exam-btn" id="examBtn">검정</button>
+    </div>
+  </div>
+</header>
+
+<!-- STATS BAR -->
+<div class="stats-bar">
+  <div class="stat">
+    <div class="stat-label">Speed · 타수</div>
+    <div class="stat-value" id="cpm">0<span class="stat-unit">타</span></div>
+    <div class="stat-mini" id="wpmMini">분당 타수</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Accuracy · 정확도</div>
+    <div class="stat-value" id="accuracy">100<span class="stat-unit">%</span></div>
+    <div class="stat-mini">precision</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Consistency · 일관성</div>
+    <div class="stat-value" id="consistency">—<span class="stat-unit">/100</span></div>
+    <div class="stat-mini">rhythm</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Interval · 간격</div>
+    <div class="stat-value" id="interval">—<span class="stat-unit">ms</span></div>
+    <div class="stat-mini">avg gap</div>
+  </div>
+</div>
+
+<!-- PROGRESS -->
+<div class="progress-wrap"><div class="progress-fill" id="progressFill"></div></div>
+
+<!-- TEXT DISPLAY -->
+<div class="text-container" id="textContainer">
+  <div class="text-inner">
+    <div class="source-row">
+      <div class="source-tag" id="sourceTag">출처 · 산업안전보건법</div>
+      <div class="word-count" id="wordCount">0 / 0</div>
+    </div>
+    <div class="text-display" id="textDisplay">
+      <div class="cursor" id="cursor"></div>
+    </div>
+    <div class="submit-hint" id="submitHint">
+      <span class="submit-key">⏎</span>
+      <span>Enter를 눌러 완료 · Press Enter to finish</span>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM PANEL -->
+<div class="bottom-panel">
+  <div class="waveform-section">
+    <div class="waveform-header">
+      <span class="waveform-title">Input Rhythm · 입력 리듬</span>
+      <span class="waveform-legend">← 과거 · 현재 →</span>
+    </div>
+    <canvas id="waveform"></canvas>
+  </div>
+  <div class="key-hint">
+    <!-- 기본 가이드 -->
+    <div id="hintDefault">
+      <div class="hint-title">HHKB Layout Guide</div>
+      <div class="hint-row">
+        <span class="keycap-mini">Ctrl</span>
+        <span class="hint-desc">Caps Lock 위치 — 새끼손가락 활용</span>
+      </div>
+      <div class="hint-row">
+        <span class="keycap-mini">◇ Fn</span>
+        <span class="hint-desc">우측 하단 · 화살표 레이어</span>
+      </div>
+      <div class="hint-row">
+        <span class="keycap-mini">⌫</span>
+        <span class="hint-desc">\ 위치 — 홈포지션 최소 이탈</span>
+      </div>
+    </div>
+
+    <!-- Fn 레이어 숫자 배치도 -->
+    <div id="hintFnLayer" style="display:none">
+      <div class="hint-title">Fn Layer · 오른손 숫자 배치</div>
+      <div class="fnwrap">
+      <div class="fnmap">
+        <div class="fnmap-row">
+          <span class="fnkey"><b>7</b><i>U</i></span>
+          <span class="fnkey"><b>8</b><i>I</i></span>
+          <span class="fnkey"><b>9</b><i>O</i></span>
+          <span class="fnkey minus"><b>-</b><i>P</i></span>
+        </div>
+        <div class="fnmap-row home">
+          <span class="fnkey"><b>4</b><i>J</i></span>
+          <span class="fnkey"><b>5</b><i>K</i></span>
+          <span class="fnkey"><b>6</b><i>L</i></span>
+          <span class="fnkey blank"></span>
+        </div>
+        <div class="fnmap-row">
+          <span class="fnkey"><b>1</b><i>M</i></span>
+          <span class="fnkey"><b>2</b><i>,</i></span>
+          <span class="fnkey"><b>3</b><i>.</i></span>
+          <span class="fnkey blank"></span>
+        </div>
+      </div>
+      <div class="fnmap-foot">
+        <span class="fnkey wide"><b>0</b><i>Space</i></span>
+        <span class="fnmap-note">검지 1·4·7<br>중지 2·5·8<br>약지 3·6·9</span>
+      </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div>HHKB · Happy Hacking Keyboard Professional Hybrid Type-S · <span id="appVersion">v1.1</span></div>
+  <div class="footer-actions">
+    <button class="action-btn" id="soundToggle">Sound <kbd>[ON]</kbd></button>
+    <button class="action-btn" id="newTextBtn">New Text <kbd>⇥</kbd></button>
+    <button class="action-btn" id="resetBtn">Restart <kbd>Esc</kbd></button>
+  </div>
+</footer>
+
+<!-- Hidden input -->
+<input type="text" class="hidden-input" id="hiddenInput" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+
+<!-- Focus hint -->
+<div class="focus-hint" id="focusHint">
+  <div class="focus-hint-text">아무 키나 누르면 계속됩니다 · Press any key</div>
+</div>
+
+<!-- COMPLETE OVERLAY -->
+<div class="complete-overlay" id="completeOverlay">
+  <div class="complete-card">
+    <div class="complete-title">Session Complete</div>
+    <div class="complete-jp">완료 — 수고하셨습니다</div>
+    <div class="complete-stats">
+      <div>
+        <div class="complete-stat-label">분당 타수</div>
+        <div class="complete-stat-value accent" id="finalCpm">0<span class="s-unit">타</span></div>
+      </div>
+      <div>
+        <div class="complete-stat-label">WPM (영문)</div>
+        <div class="complete-stat-value" id="finalWpm">0</div>
+      </div>
+      <div>
+        <div class="complete-stat-label">정확도</div>
+        <div class="complete-stat-value" id="finalAcc">0<span class="s-unit">%</span></div>
+      </div>
+      <div>
+        <div class="complete-stat-label">일관성</div>
+        <div class="complete-stat-value" id="finalCon">—</div>
+      </div>
+    </div>
+    <div class="complete-detail" id="completeDetail"></div>
+    <button class="action-btn" id="continueBtn">다음 지문 · Continue <kbd>↵</kbd></button>
+  </div>
+</div>
+
+<script>
+const CORPUS = {
+  law: [
+    "산업안전보건법 제1조(목적) 이 법은 산업 안전 및 보건에 관한 기준을 확립하고 그 책임의 소재를 명확하게 하여 산업재해를 예방하고 쾌적한 작업환경을 조성함으로써 노무를 제공하는 사람의 안전 및 보건을 유지, 증진함을 목적으로 한다.",
+    "제5조(사업주 등의 의무) 사업주는 이 법과 이 법에 따른 명령으로 정하는 산업재해 예방을 위한 기준을 지키고, 근로자의 신체적 피로와 정신적 스트레스 등을 줄일 수 있는 쾌적한 작업환경을 조성하여야 한다.",
+    "제36조(위험성평가의 실시) 사업주는 건설물, 기계, 기구, 설비, 원재료, 가스, 증기, 분진, 근로자의 작업행동 또는 그 밖의 업무로 인한 유해, 위험 요인을 찾아내어 부상 및 질병으로 이어질 수 있는 위험성의 크기가 허용 가능한 범위인지를 평가하여야 한다.",
+    "중대재해 처벌 등에 관한 법률 제4조 사업주 또는 경영책임자등은 종사자의 안전, 보건상 유해 또는 위험을 방지하기 위하여 안전보건관리체계의 구축 및 그 이행에 관한 조치를 하여야 한다.",
+    "제29조(근로자에 대한 안전보건교육) 사업주는 소속 근로자에게 고용노동부령으로 정하는 바에 따라 정기적으로 안전보건교육을 하여야 한다. 유해하거나 위험한 작업에 근로자를 사용할 때에는 특별교육을 추가로 실시하여야 한다.",
+    "제38조(안전조치) 사업주는 기계, 기구, 그 밖의 설비에 의한 위험, 폭발성, 발화성 및 인화성 물질 등에 의한 위험, 전기, 열, 그 밖의 에너지에 의한 위험을 예방하기 위하여 필요한 조치를 하여야 한다.",
+    "산업안전보건기준에 관한 규칙 제32조 사업주는 근로자가 유해, 위험한 작업을 하는 경우 그 작업 조건에 적합한 보호구를 작업하는 근로자 수 이상으로 지급하고 착용하도록 하여야 한다.",
+    "제63조(도급인의 안전조치 및 보건조치) 도급인은 관계수급인 근로자가 도급인의 사업장에서 작업을 하는 경우에 자신의 근로자와 관계수급인 근로자의 산업재해를 예방하기 위하여 안전 및 보건 시설의 설치 등 필요한 조치를 하여야 한다.",
+    "제15조(안전보건관리책임자) 사업주는 사업장을 실질적으로 총괄하여 관리하는 사람에게 산업재해 예방계획의 수립, 안전보건관리규정의 작성 및 변경, 안전보건교육, 작업환경의 점검 및 개선, 근로자의 건강관리, 산업재해의 원인 조사 및 재발 방지대책 수립에 관한 사항을 총괄하여 관리하도록 하여야 한다.",
+    "제17조(안전관리자) 사업주는 사업장에 안전에 관한 기술적인 사항에 관하여 사업주 또는 안전보건관리책임자를 보좌하고 관리감독자에게 지도, 조언하는 업무를 수행하는 사람을 두어야 한다. 이를 안전관리자라 한다.",
+    "제18조(보건관리자) 사업주는 사업장에 보건에 관한 기술적인 사항에 관하여 사업주 또는 안전보건관리책임자를 보좌하고 관리감독자에게 지도, 조언하는 업무를 수행하는 사람을 두어야 한다. 이를 보건관리자라 한다.",
+    "제24조(산업안전보건위원회) 사업주는 사업장의 안전 및 보건에 관한 중요 사항을 심의, 의결하기 위하여 사업장에 근로자위원과 사용자위원이 같은 수로 구성되는 산업안전보건위원회를 구성, 운영하여야 한다.",
+    "중대재해 처벌 등에 관한 법률 제6조(중대산업재해 사업주와 경영책임자등의 처벌) 제4조 또는 제5조를 위반하여 사망자가 1명 이상 발생한 중대산업재해에 이르게 한 사업주 또는 경영책임자등은 1년 이상의 징역 또는 10억원 이하의 벌금에 처한다. 이 경우 징역과 벌금을 병과할 수 있다.",
+    "제5조(도급, 용역, 위탁 등 관계에서의 안전 및 보건 확보의무) 사업주 또는 경영책임자등은 사업주나 법인 또는 기관이 제3자에게 도급, 용역, 위탁 등을 행한 경우에는 제3자의 종사자에게 중대산업재해가 발생하지 아니하도록 안전 및 보건 확보의무를 이행하여야 한다.",
+    "제125조(작업환경측정) 사업주는 유해인자로부터 근로자의 건강을 보호하고 쾌적한 작업환경을 조성하기 위하여 인체에 해로운 작업을 하는 작업장으로서 고용노동부령으로 정하는 작업장에 대하여 작업환경측정을 하여야 한다.",
+    "제54조(중대재해 발생 시 사업주의 조치) 사업주는 중대재해가 발생하였을 때에는 즉시 해당 작업을 중지시키고 근로자를 작업장소에서 대피시키는 등 안전 및 보건에 관하여 필요한 조치를 하여야 한다. 또한 지체 없이 고용노동부장관에게 보고하여야 한다.",
+  ],
+  tech: [
+    "The Apple M4 Pro chip features a 12-core CPU and 16-core GPU built on a second-generation 3nm process, reaching 273 GB/s of memory bandwidth.",
+    "iPad Pro with the M4 chip uses tandem OLED technology producing 1000 nits full-screen brightness, while remaining the thinnest Apple device at 5.1mm.",
+    "MacBook Pro with M4 Max offers up to 128GB unified memory and a Liquid Retina XDR display with ProMotion refresh rates from 1Hz to 120Hz.",
+    "AirPods Pro 2 introduces adaptive audio that blends transparency and noise cancellation in real time, with the H2 chip processing ambient sound continuously.",
+    "Apple Watch Ultra 2 features a titanium case, dual-frequency GPS, and a 3000-nit Always-On Retina display built for athletes and explorers.",
+    "Vision Pro relies on the R1 chip processing input from twelve cameras and five sensors, with dual micro-OLED displays exceeding 4K resolution per eye.",
+    "iPhone 16 Pro features the A18 Pro chip with a 16-core Neural Engine optimized for Apple Intelligence and on-device language model inference.",
+    "iCloud Private Relay encrypts Safari traffic through two separate relays, so neither Apple nor a network provider sees the full picture of browsing activity.",
+    "macOS Sequoia introduced iPhone Mirroring, letting a paired iPhone appear as a window on the Mac with full keyboard and trackpad input.",
+    "Final Cut Pro for iPad uses Metal-accelerated rendering to handle multi-stream ProRes timelines, bringing desktop-class video editing to a touch platform.",
+    "The Apple Silicon transition retired Intel processors after fifteen years, with unified memory architecture redefining performance baselines for the Mac.",
+    "Studio Display features a 27-inch 5K Retina panel with True Tone and a 12-megapixel ultra-wide camera with Center Stage for video calls.",
+  ],
+  stock: [
+    "NVDA dominates the AI accelerator market with Blackwell architecture chips, and its gross margins above 75 percent reflect deep CUDA software lock-in.",
+    "AAPL generated over 390 billion dollars in annual revenue, with Services at record highs and buybacks driving long-term shareholder returns.",
+    "MSFT Azure cloud revenue grew around 30 percent year-over-year, driven by AI workloads and deep Copilot integration across Microsoft 365.",
+    "TSLA deployed record energy storage capacity while Full Self-Driving progresses toward autonomy, potentially unlocking new robotaxi revenue streams.",
+    "GOOGL faces pressure on Search from generative AI, yet YouTube and Cloud keep growing, and custom TPU chips reduce reliance on Nvidia silicon.",
+    "BRK.B Berkshire Hathaway holds record cash reserves above 300 billion dollars, signaling valuation discipline in an elevated market environment.",
+    "META funds its mixed reality bet with a strong advertising business, and Ray-Ban smart glasses show a viable consumer wearable form factor.",
+    "AMZN AWS remains the largest cloud provider while retail margins expand, and custom Trainium silicon competes with Nvidia on inference cost.",
+    "AMD captured meaningful data center CPU share with Epyc processors, while MI300 accelerators serve as a credible second source for AI compute.",
+    "TSM manufactures advanced nodes for nearly every leading chip designer, and its investment in N3 and N2 fabs reinforces a structural process lead.",
+    "JPM JPMorgan Chase posted record net interest income while building reserves, deploying capital opportunistically through credit cycles.",
+    "COST Costco sustains membership renewal rates above 90 percent, and its limited SKU strategy produces superior inventory turnover versus peers.",
+  ],
+  keyboard: [
+    "Topre electrocapacitive switches combine a rubber dome with a conical spring, producing the muted thock sound treasured by typists around the world.",
+    "The HHKB layout removes the numpad and arrow cluster to keep fingers near the home row, placing Control where Caps Lock normally sits.",
+    "Cherry MX Silent Red switches offer linear actuation dampened on both strokes, with a 45 gram force that allows rapid typing without fatigue.",
+    "Holy Panda switches became legendary for their sharp tactile bump, combining Halo stems with Panda housings prized by keyboard enthusiasts.",
+    "PBT double-shot keycaps resist shine and fading across years of heavy use, and the cherry profile offers a low sculpted shape many prefer.",
+    "Lubing stabilizers with Krytox 205g0 eliminates rattle on larger keys, and band-aid modification further dampens the bottom-out noise.",
+    "QMK and VIA firmware allow per-key remapping and macro programming, letting a function layer transform a compact board into a full input device.",
+    "The Realforce R3 series uses Topre switches with silenced sliders, offering quiet typing comparable to the HHKB Type-S for office use.",
+    "Group buys built much of the enthusiast keyboard market, letting small designers produce limited custom cases despite long lead times.",
+    "Hot-swap sockets removed the need for soldering when changing switches, lowering the barrier for newcomers to experiment with different feels.",
+    "Gasket-mounted plates suspend the switch plate between soft strips, softening the bottom-out feel and reducing high-frequency switch ping.",
+    "The 60 percent form factor became dominant because it keeps the alphanumeric keys while removing rarely-used clusters for a minimal footprint.",
+  ],
+  quote: [
+    "오늘 할 수 있는 일에 전력을 다하라. 그러면 내일은 한 걸음 더 나아갈 수 있다. 작은 노력이 쌓여 큰 결실을 맺으며, 꾸준함은 결국 재능을 이긴다.",
+    "성공은 준비된 자에게 찾아오는 기회다. 기회가 왔을 때 잡을 수 있도록 평소에 실력을 갈고닦아야 하며, 준비 없는 행운은 오래가지 못하는 법이다.",
+    "천 리 길도 한 걸음부터 시작된다. 아무리 큰 목표라도 첫걸음을 떼지 않으면 결코 도달할 수 없으니, 망설임을 내려놓고 지금 바로 출발하라.",
+    "배움에는 끝이 없다. 어제보다 나은 오늘을 만들기 위해 꾸준히 노력하는 사람이 결국 멀리 가며, 멈추지 않는 자만이 진정한 성장을 이룬다.",
+    "가장 큰 위험은 위험이 없는 삶을 사는 것이다. 안주하지 않고 도전하는 자만이 새로운 길을 발견하며, 실패의 경험조차 값진 자산으로 남는다.",
+    "시간은 누구에게나 공평하게 주어진다. 그 시간을 어떻게 쓰느냐에 따라 인생의 방향이 결정되니, 오늘 하루를 헛되이 흘려보내지 말아야 한다.",
+    "넘어지는 것이 실패가 아니라 넘어진 자리에 머무는 것이 실패다. 다시 일어서는 용기가 진정한 힘이며, 그 힘은 포기하지 않는 마음에서 나온다.",
+    "좋은 습관은 처음에는 만들기 어렵지만 나중에는 우리를 만든다. 매일의 작은 실천이 미래를 바꾸며, 반복된 행동이 결국 한 사람의 인격이 된다.",
+    "남과 비교하지 말고 어제의 나와 비교하라. 진정한 경쟁 상대는 언제나 거울 속의 자신이며, 어제보다 한 뼘 나아지는 것이 가장 확실한 성장이다.",
+    "준비하지 않으면 실패를 준비하는 것과 같다. 철저한 대비가 위기의 순간에 빛을 발하며, 평소의 작은 점검들이 큰 사고를 막는 방패가 된다.",
+    "말은 신중하게 행동은 과감하게 하라. 신뢰는 말이 아니라 일관된 행동으로 쌓이는 법이며, 한번 무너진 믿음은 다시 세우기가 몹시 어렵다.",
+    "완벽을 기다리지 말고 지금 시작하라. 시작이 절반이며 멈추지 않으면 반드시 끝에 다다르니, 부족함을 두려워 말고 한 걸음씩 나아가면 된다.",
+    "실패는 성공의 반대말이 아니라 과정의 다른 이름이다. 넘어진 횟수보다 일어난 횟수가 하나 더 많다면, 그 사람은 여전히 앞으로 나아가고 있는 것이다.",
+    "기회는 준비된 사람의 문을 두드리는 것이 아니라, 문을 열어 둔 사람에게 걸어 들어온다. 마음의 문을 열고 배움을 멈추지 않는 자세가 곧 준비다.",
+    "큰 성취는 작은 결심들의 총합이다. 오늘 하나를 미루면 내일은 둘을 미루게 되니, 지금 이 순간의 선택이 곧 미래의 나를 만든다는 사실을 기억하라.",
+  ],
+  safety: [
+    "작업을 시작하기 전에 반드시 위험 요인을 확인하고, 안전 보호구를 올바르게 착용하였는지 점검합니다. 사소한 부주의가 큰 사고로 이어질 수 있으므로 늘 경각심을 가져야 합니다.",
+    "고소 작업을 할 때에는 안전대를 견고한 구조물에 체결하고, 작업 발판의 상태를 수시로 확인하여 추락 사고를 예방하여야 합니다. 안전모의 턱끈도 반드시 조여 착용합니다.",
+    "밀폐 공간에 들어가기 전에는 반드시 산소 농도와 유해 가스 농도를 측정하고, 충분한 환기를 실시한 후에 출입하여야 합니다. 외부에는 감시인을 반드시 배치하여야 합니다.",
+    "중량물을 들어 올릴 때에는 허리를 곧게 펴고 다리의 힘을 이용하여, 근골격계 질환과 요통이 발생하지 않도록 주의합니다. 무리한 경우에는 보조 장비를 활용하여야 합니다.",
+    "전기 작업을 수행할 때에는 반드시 전원을 차단하고 잠금 표지를 부착하여, 예상치 못한 통전으로 인한 감전 사고를 막아야 합니다. 절연 보호구의 손상 여부도 함께 확인합니다.",
+    "화재 발생에 대비하여 소화기의 위치와 사용 방법을 숙지하고, 비상구와 대피 경로를 평소에 명확히 파악해 두어야 합니다. 소화 설비의 점검 상태도 정기적으로 확인합니다.",
+    "기계 설비를 정비하거나 청소할 때에는 운전을 멈추고 기동 장치에 잠금 장치를 설치하여, 갑작스러운 작동을 방지합니다. 작업 중임을 알리는 표지도 함께 부착하여야 합니다.",
+    "작업장의 정리 정돈은 모든 안전의 기본입니다. 통로를 확보하고 자재를 정해진 위치에 보관하여 넘어짐 사고를 예방하며, 바닥의 기름이나 물기는 즉시 제거하여야 합니다.",
+    "유해 화학 물질을 취급할 때에는 물질안전보건자료를 확인하고, 적절한 보호 장갑과 보안경을 착용한 뒤 환기가 잘 되는 곳에서 작업합니다. 비상 세척 설비의 위치도 숙지합니다.",
+    "근로자의 안전과 건강은 그 무엇과도 바꿀 수 없는 가장 소중한 가치입니다. 모두가 함께 만들어 가는 안전한 일터가 되어야 하며, 작은 관심이 동료의 생명을 지킬 수 있습니다.",
+    "사고는 예고 없이 찾아오지만 철저한 예방으로 막을 수 있습니다. 작은 위험 신호도 그냥 지나치지 말고 즉시 개선하며, 아차 하는 순간의 경험도 반드시 기록하고 공유합니다.",
+    "안전 점검은 형식이 아니라 생명을 지키는 약속입니다. 매일 작업 전 점검을 생활화하여 무재해 사업장을 실현하며, 발견된 문제는 책임자에게 즉시 보고하고 조치하여야 합니다.",
+    "지게차가 운행하는 구역에서는 보행자 통로를 명확히 구분하고, 운전자의 시야가 확보되지 않는 코너에는 반사경을 설치합니다. 후진 경보음이 정상 작동하는지도 매일 확인하여야 합니다.",
+    "사다리 작업은 반드시 두 명이 한 조로 실시하고, 사다리의 미끄럼 방지 장치와 지면 상태를 먼저 확인합니다. 최상단 발판에 올라서는 행동은 어떤 경우에도 금지되어 있습니다.",
+  ],
+  business: [
+    "안녕하십니까. 보내 주신 자료는 잘 확인하였습니다. 검토 후 빠른 시일 내에 회신드리도록 하겠습니다. 추가로 필요한 사항이 있으면 언제든 말씀해 주십시오. 감사합니다.",
+    "금일 회의에서 논의된 내용을 정리하여 첨부 파일로 송부드립니다. 검토하신 후 추가 의견이 있으시면 회신 부탁드리며, 다음 일정은 별도로 안내드리겠습니다.",
+    "바쁘신 와중에도 협조해 주셔서 진심으로 감사드립니다. 덕분에 일정에 차질 없이 업무를 마무리할 수 있었으며, 앞으로도 좋은 협력 관계를 이어 가기를 바랍니다.",
+    "다음 주 화요일 오후 두 시에 예정된 회의 일정을 다시 한번 안내드립니다. 참석이 어려우시면 미리 연락 주시기 바라며, 회의 자료는 하루 전까지 공유하겠습니다.",
+    "요청하신 견적서를 작성하여 보내 드립니다. 내용을 검토하신 후 궁금한 점이 있으시면 언제든지 문의해 주시고, 계약 진행을 원하시면 회신 부탁드립니다.",
+    "그동안 보여 주신 신뢰와 성원에 깊이 감사드립니다. 앞으로도 최선을 다하여 보답하는 동반자가 되겠으며, 더 나은 서비스로 기대에 부응하도록 노력하겠습니다.",
+    "첨부된 계약서 초안을 검토해 주시기 바랍니다. 수정이 필요한 부분은 의견을 주시면 반영하여 다시 송부하겠으며, 최종본은 양측 합의 후 확정하고자 합니다.",
+    "이번 사안에 대해 신속하게 대응해 주신 점 감사드리며, 향후 협력 관계가 더욱 돈독해지기를 기대합니다. 구체적인 협의는 다음 미팅에서 이어 가겠습니다.",
+    "문의하신 내용에 대해 답변드립니다. 관련 규정과 절차를 확인한 결과 아래와 같이 안내드리오니 참고하시기 바라며, 추가 문의는 담당자에게 연락 주십시오.",
+    "프로젝트 진행 상황을 보고드립니다. 현재 계획 대비 순조롭게 진행되고 있으며, 예정된 기한 내 완료될 전망입니다. 세부 일정은 첨부 자료를 확인해 주십시오.",
+    "연락이 늦어 죄송합니다. 담당자 확인을 거쳐 정확한 내용을 전달드리고자 시간이 다소 소요되었습니다. 너른 양해 부탁드리며 신속히 처리하도록 하겠습니다.",
+    "귀사의 무궁한 발전을 기원합니다. 협력 제안에 관심을 가져 주셔서 감사하며, 구체적인 사항은 별도로 협의하고자 하오니 편하신 일정을 알려 주시기 바랍니다.",
+    "회의 자료는 최소 하루 전에 공유하는 것을 원칙으로 합니다. 참석자들이 내용을 미리 검토하고 의견을 준비할 수 있어야, 회의 시간이 결정을 내리는 자리로 온전히 쓰일 수 있습니다.",
+    "말씀해 주신 일정 변경 건은 내부 협의를 거쳐 반영하였습니다. 수정된 일정표를 첨부하오니 확인 부탁드리며, 이후 변동 사항이 생기면 즉시 공유드리겠습니다.",
+  ],
+  number: [
+    "2024년 3월 15일 오전 9시 30분, 제1공장 A동에서 정기 안전 점검을 실시하였다. 총 47개 항목 중 3건의 개선 사항이 발견되어 4월 5일까지 조치를 완료하기로 하였다.",
+    "산업안전보건법 제36조 제1항에 따라 위험성평가를 실시하고, 그 결과를 3년간 보관하여야 한다. 이를 위반할 경우 500만원 이하의 과태료가 부과될 수 있으므로 유의해야 한다.",
+    "이번 분기 매출은 전년 동기 대비 12.5퍼센트 증가한 8억 7천만원을 기록하였다. 영업이익률은 약 18.3퍼센트 수준으로, 목표치인 15퍼센트를 무난히 초과 달성하였다.",
+    "작업장 소음 측정 결과 평균 85.2데시벨로 나타나 기준치인 90데시벨 이내였으나, 일부 구간에서 92.7데시벨이 측정되어 해당 구역에 방음 설비를 보강하기로 하였다.",
+    "전체 근로자 128명 중 안전교육 이수자는 124명으로 96.9퍼센트의 이수율을 보였다. 미이수자 4명은 다음 주 보충 교육을 통해 12월 20일까지 이수를 완료할 예정이다.",
+    "계약 금액은 부가가치세 10퍼센트를 포함하여 총 3,300만원이며, 계약 기간은 2024년 4월 1일부터 12월 31일까지이다. 대금은 3회에 걸쳐 분할 지급하기로 협의하였다.",
+    "비상 대피 훈련은 오후 2시 15분에 시작되어 전 인원 256명이 4분 38초 만에 집결지로 대피를 완료하였다. 목표 시간인 5분 이내를 달성하여 우수한 결과로 평가되었다.",
+    "고소 작업대의 최대 적재 하중은 300킬로그램이며, 작업 높이는 최대 12미터까지 가능하다. 안전 점검은 매일 1회 실시하고, 정밀 점검은 매월 첫째 주에 시행한다.",
+    "올해 미국 주식 포트폴리오 수익률은 23.7퍼센트를 기록하였으며, 그중 반도체 섹터가 차지하는 비중은 약 35퍼센트이다. 섹터 집중에 따른 변동성 관리가 과제로 남았다.",
+    "환기 설비 가동 후 30분이 경과한 시점에 측정한 산소 농도는 20.9퍼센트로, 안전 기준인 18퍼센트 이상을 충족하였다. 유해 가스 농도 또한 허용 기준 이내로 확인되었다.",
+    "제2공장 증설 공사는 총 공사비 45억원 규모로, 2025년 1월 착공하여 18개월간 진행될 예정이다. 완공 후에는 연간 생산 능력이 약 30퍼센트 증대될 것으로 기대된다.",
+    "근로자 1인당 연간 안전교육 시간은 법정 기준 16시간이며, 관리감독자는 추가로 연 16시간을 이수하여야 한다. 미이수 시 과태료가 부과되므로 교육 일정을 철저히 관리한다.",
+  ],
+  fnlayer: [
+    "점검일 2024-03-15, 차기 점검 2024-06-15. 담당 부서 코드 4762, 승인 번호 8391. 총 47개 항목 중 12건 지적, 조치 완료 35건, 잔여 12건은 2024-04-30까지 처리한다.",
+    "산업안전보건법 제36조 제1항, 제38조 제2항, 제63조 제3항 위반. 과태료 500만원, 과징금 1200만원. 시정 기한 2025-01-31, 재점검 2025-02-14. 사건 번호 2024-7891.",
+    "1분기 매출 8,745억원, 2분기 9,120억원, 3분기 10,336억원, 4분기 11,708억원. 연간 합계 39,909억원으로 전년 대비 17.4퍼센트 증가. 영업이익률 18.6퍼센트 달성.",
+    "소음 측정값 85.2dB, 87.6dB, 91.4dB, 89.3dB, 92.7dB. 평균 89.24dB. 기준치 90dB 초과 구간 2개소. 측정 일시 2024-05-21 14:30, 재측정 예정일 2024-06-04 09:00.",
+    "근로자 1,284명 중 교육 이수 1,197명, 미이수 87명. 이수율 93.2퍼센트. 보충 교육 일정 2024-07-08, 2024-07-15, 2024-07-22. 최종 마감 2024-07-31 18:00까지이다.",
+    "계약 금액 3,300만원, 부가세 330만원 포함 총 3,630만원. 계약 기간 2024-04-01 부터 2024-12-31 까지. 1차 지급 1,210만원, 2차 1,210만원, 3차 1,210만원으로 분할한다.",
+    "대피 훈련 시작 14:15:00, 1층 완료 14:16:38, 2층 14:17:52, 3층 14:19:07. 전 인원 256명 집결 14:19:45. 총 소요 4분 45초로 목표 5분 이내를 달성하였다.",
+    "적재 하중 300kg, 작업 높이 12.5m, 풍속 제한 10.7m/s. 점검 주기 1일 1회, 정밀 점검 월 1회, 정기 검사 6개월. 검사 번호 KS-2024-0847, 유효 기한 2025-03-20.",
+    "포트폴리오 수익률 23.7퍼센트. 반도체 35퍼센트, 소프트웨어 28퍼센트, 금융 19퍼센트, 헬스케어 12퍼센트, 현금 6퍼센트. 기준일 2024-12-31, 평가액 1억 8,470만원.",
+    "산소 농도 20.9퍼센트, 황화수소 0.8ppm, 일산화탄소 12ppm, 메탄 0.3퍼센트. 기준 산소 18퍼센트 이상, 황화수소 10ppm 이하. 측정 2024-08-09 07:45, 재측정 08:15.",
+    "공사비 45억원, 착공 2025-01-06, 준공 2026-07-31, 공기 18개월. 1공구 15억원, 2공구 18억원, 3공구 12억원. 생산 능력 시간당 1,200개에서 1,560개로 30퍼센트 증대.",
+    "안전교육 법정 기준 근로자 16시간, 관리감독자 32시간, 신규 채용 8시간, 특별 교육 2시간. 이수 현황 3분기 기준 87.4퍼센트. 4분기 목표 95퍼센트, 마감 2024-12-20.",
+    "재해 통계 2021년 42건, 2022년 37건, 2023년 29건, 2024년 18건. 4년간 57.1퍼센트 감소. 강도율 0.42에서 0.19로, 도수율 3.87에서 1.64로 개선되었다.",
+    "품질 검사 결과 A라인 96.9퍼센트, B라인 93.6퍼센트, C라인 99.3퍼센트. 불량률 각각 3.1, 6.4, 0.7퍼센트. 목표 불량률 5퍼센트 이하를 B라인만 초과하였다.",
+    "설비 번호 6739, 9663, 3396, 6996, 9339. 점검 주기 각 96시간. 최근 점검 일시는 6월 9일 09:36, 6월 19일 16:39, 6월 29일 13:06으로 모두 정상 기록되었다.",
+    "온도 측정 결과 35.7도, 57.3도, 73.5도, 75.7도, 37.5도. 평균 55.94도. 허용 범위 35도에서 75도 사이이며, 75.7도 구간은 즉시 냉각 조치를 시행하였다.",
+    "화학물질 취급량 톨루엔 1,240L, 아세톤 870L, 메탄올 560L, 벤젠 120L. MSDS 갱신일 2024-02-18. 노출 기준 톨루엔 50ppm, 아세톤 500ppm, 메탄올 200ppm 이하.",
+    "비상 연락망 소방서 119, 경찰서 112, 안전보건공단 1544-3088, 본사 상황실 02-3486-1200. 야간 당직 010-4827-5931. 최종 갱신 2024-11-05 17:20 기준이다.",
+  ],
+  longform: [
+    "안전은 하루아침에 완성되지 않는다. 매일 아침 작업 전에 장비를 점검하고, 보호구를 착용하고, 동료의 상태를 살피는 작은 행동들이 쌓여서 비로소 안전한 일터가 만들어진다. 사고가 나지 않는 날들이 이어지면 사람들은 점검을 형식으로 여기기 시작한다. 그러나 무재해 기록이란 운이 좋아서 얻어지는 것이 아니라, 누군가 매일 같은 자리에서 같은 항목을 확인해 온 결과이다. 위험은 익숙함 속에 숨어 있다. 십 년을 다룬 기계라도 오늘 처음 보는 기계처럼 대하는 마음가짐, 그것이 안전 문화의 시작이다. 결국 안전이란 거창한 구호가 아니라 반복되는 일상의 성실함이며, 그 성실함이 나와 동료의 내일을 지킨다.",
+    "좋은 도구는 손에 익을수록 존재감이 사라진다. 처음 기계식 키보드를 만졌을 때는 키압과 소리가 낯설어 자꾸 의식하게 되지만, 몇 주가 지나면 손가락이 자판 위를 스스로 움직이고 도구는 투명해진다. 생각이 문장이 되는 데 걸리는 시간이 줄어들수록 일의 밀도는 높아진다. 그래서 장인들은 도구에 아낌없이 투자한다. 그것은 사치가 아니라 자신의 시간과 집중력에 대한 투자이기 때문이다. 하루 여덟 시간을 함께하는 물건이라면 더욱 그렇다. 의자와 모니터와 키보드는 몸에 닿는 시간이 가장 긴 동료다. 좋은 동료를 곁에 두는 일에 인색할 이유가 없다. 손끝이 편안해야 마음도 오래 견딘다.",
+    "기록은 기억보다 힘이 세다. 머릿속에 담아 둔 계획은 하루만 지나도 흐릿해지지만, 종이에 적어 둔 한 줄은 일 년이 지나도 그 자리에 남아 있다. 업무를 잘하는 사람들의 공통점은 화려한 말솜씨가 아니라 꾸준한 기록 습관이다. 회의가 끝나면 결정 사항을 정리하고, 작업이 끝나면 결과와 특이사항을 남기고, 실수가 있었다면 원인과 재발 방지책을 적어 둔다. 이런 기록이 쌓이면 개인의 경험은 조직의 자산이 된다. 문서화가 번거롭게 느껴지는 날도 있지만, 석 달 뒤의 내가 오늘의 기록 덕분에 한 시간을 아끼게 된다면 그보다 남는 장사는 없다. 쓰는 만큼 남고, 남는 만큼 성장한다.",
+    "출근길 지하철에서 창밖을 보면 계절이 바뀌는 것이 보인다. 봄에는 철길 옆 벚나무가 하얗게 부풀고, 여름에는 초록이 무성해지고, 가을에는 은행나무가 노랗게 물들고, 겨울에는 앙상한 가지 위로 눈이 쌓인다. 매일 같은 노선을 오가는 반복적인 일상 속에서도 풍경은 조금씩 달라진다. 일도 마찬가지다. 어제와 똑같아 보이는 하루지만 자세히 들여다보면 어제보다 나아진 부분이 반드시 있다. 보고서 한 장을 더 빨리 쓰게 되었거나, 어려운 통화를 조금 덜 긴장하며 마쳤거나, 낯설던 용어가 익숙해졌거나. 성장은 계절처럼 천천히, 그러나 분명하게 온다. 조급해하지 않고 오늘의 일을 해내는 것으로 충분하다.",
+    "현장에서 이십 년을 보낸 선배가 신입에게 해 준 말이 있다. 위험한 곳에는 반드시 신호가 먼저 온다는 것이다. 기계에서 평소와 다른 소리가 나고, 바닥에 기름이 한 방울 떨어져 있고, 누군가 지름길로 다니기 시작한다. 큰 사고는 갑자기 일어나는 것처럼 보이지만, 돌아보면 언제나 작은 징후들이 먼저 있었다. 하인리히 법칙이 말하는 것도 결국 같은 이야기다. 한 건의 중대 재해 뒤에는 스물아홉 건의 경미한 사고와 삼백 건의 아차 사고가 있다. 그러니 사소한 이상을 발견했을 때 그냥 지나치지 않는 사람, 번거로워도 보고하고 기록하는 사람이 결국 동료의 생명을 구한다. 안전은 예민한 사람들이 지켜 온 역사다.",
+    "커피 한 잔을 내리는 데는 오 분이 걸리지 않지만, 그 오 분이 하루의 리듬을 바꾼다. 물이 끓기를 기다리고, 원두가 부풀어 오르는 것을 바라보는 동안 머릿속에서는 오늘 할 일들이 천천히 줄을 선다. 바쁠수록 이런 짧은 의식이 필요하다. 쉼 없이 달리기만 하는 사람은 방향을 잃기 쉽고, 잠깐 멈추어 숨을 고르는 사람은 더 멀리 간다. 업무 중에도 마찬가지다. 한 가지 일을 끝내면 잠시 자리에서 일어나 창밖을 보거나 물을 한 잔 마시는 것만으로 다음 일의 집중력이 달라진다. 휴식은 게으름이 아니라 일의 일부다. 잘 쉬는 기술이 곧 오래 일하는 기술이다.",
+    "타자 연습을 하다 보면 이상한 순간이 온다. 속도를 올리려고 힘을 줄수록 오타가 늘고, 마음을 비우고 리듬에 몸을 맡기면 오히려 기록이 좋아진다. 손가락은 생각보다 똑똑해서, 머리가 간섭하지 않을 때 가장 정확하게 움직인다. 일에서도 비슷한 경험을 한다. 잘하려는 욕심이 앞서면 문장이 꼬이고 판단이 흐려지지만, 충분히 준비한 뒤에 결과에 대한 집착을 내려놓으면 일이 술술 풀린다. 연습은 배신하지 않는다는 말은 그래서 절반만 맞다. 연습이 실력을 만들고, 평정심이 그 실력을 꺼내 쓴다. 매일 조금씩, 힘을 빼고, 꾸준히. 타자든 일이든 결국 같은 원리로 늘어 간다.",
+    "보고서를 쓸 때 가장 어려운 것은 첫 문장이다. 하고 싶은 말은 많은데 어디서부터 시작해야 할지 몰라 커서만 깜빡이는 시간이 길어진다. 그럴 때 유용한 방법은 결론부터 쓰는 것이다. 이 문서로 전하려는 핵심을 한 줄로 적고 나면, 나머지는 그 한 줄을 설명하는 근거와 사례로 자연스럽게 채워진다. 읽는 사람의 시간은 언제나 부족하므로, 좋은 글은 앞부분만 읽어도 전체가 파악되는 글이다. 두괄식은 단지 형식이 아니라 상대를 배려하는 태도다. 쓰기 전에 생각을 정리하고, 정리된 생각을 순서대로 옮기고, 옮긴 글을 한 번 소리 내어 읽어 보는 것. 이 단순한 과정이 문서의 품질을 결정한다.",
+    "위험성평가는 서류를 만들기 위한 일이 아니라 현장을 바라보는 눈을 기르는 일이다. 같은 작업장을 두고도 어떤 사람은 아무 문제를 느끼지 못하고, 어떤 사람은 열 가지 위험을 찾아낸다. 차이는 타고난 감각이 아니라 훈련에서 온다. 작업을 단계별로 쪼개어 보고, 각 단계에서 무엇이 잘못될 수 있는지 묻고, 그 가능성과 심각성을 저울질하는 연습을 반복하면 누구나 위험을 보는 눈을 갖게 된다. 중요한 것은 평가 이후다. 찾아낸 위험을 줄이는 대책이 실행되고, 그 결과가 다시 확인될 때 비로소 평가는 완성된다. 문서는 그 과정의 기록일 뿐이며, 본질은 언제나 현장에 있다.",
+    "계약서는 신뢰가 무너졌을 때를 대비한 문서이지만, 역설적으로 좋은 계약서가 신뢰를 만든다. 서로의 역할과 책임이 명확하게 적혀 있으면 오해가 줄고, 오해가 줄면 다툼도 줄어든다. 애매한 문장 하나가 훗날 몇 달의 분쟁으로 돌아오는 일은 드물지 않다. 그래서 계약을 검토할 때는 낙관적인 시나리오가 아니라 일이 틀어졌을 때를 상상하며 읽어야 한다. 기한이 지켜지지 않으면 어떻게 되는지, 범위 밖의 요청은 어떻게 처리하는지, 해지는 어떤 절차로 이루어지는지 미리 확인한다. 불편한 질문을 먼저 던지는 것이 서로를 지키는 가장 정중한 방법이다.",
+    "점심을 먹고 십오 분을 걷는 습관을 들인 뒤로 오후의 컨디션이 달라졌다. 걷는 동안에는 화면도 문서도 없이 몸의 리듬만 남는다. 그 짧은 공백 속에서 오전에 막혀 있던 문제의 실마리가 떠오르는 일이 잦다. 몸을 움직이면 생각도 함께 움직인다는 말은 과장이 아니다. 다리가 규칙적으로 움직이는 동안 머리는 억지로 쥐어짜던 힘을 내려놓고, 그 틈으로 새로운 연결이 스며든다. 책상 앞에서 한 시간을 버티는 것보다 잠깐 걷고 돌아와 삼십 분을 집중하는 편이 결과가 좋을 때가 많다. 걷기는 가장 값싸고 확실한 회복의 기술이다.",
+    "책상 위가 어지러우면 머릿속도 어지럽다. 퇴근 전 오 분을 들여 책상을 정리하는 일은 단순한 청소가 아니라 내일의 나를 위한 준비다. 아침에 출근해서 깨끗한 책상을 마주하면 하루를 어디서부터 시작할지 고민하는 시간이 줄어든다. 현장의 정리 정돈이 사고를 예방하듯, 사무실의 정리 정돈은 실수를 예방한다. 서류가 제자리에 있으면 찾는 시간이 사라지고, 찾는 시간이 사라지면 마감의 압박도 한결 가벼워진다. 정리란 물건을 버리는 일이 아니라 자리를 정하는 일이다. 모든 것에 제자리가 있으면 마음에도 제자리가 생기는 법이다.",
+    "보고서의 설득력은 형용사가 아니라 숫자에서 나온다. 많이 개선되었다는 말보다 삼십 퍼센트 줄었다는 말이 힘이 세고, 빠르게 처리하겠다는 약속보다 사흘 안에 회신하겠다는 약속이 신뢰를 얻는다. 숫자는 오해의 여지를 줄이고 논의의 기준을 만들어 준다. 다만 숫자를 다룰 때는 그만큼의 책임이 따른다. 출처가 분명해야 하고, 계산이 맞아야 하고, 비교의 기준이 공정해야 한다. 잘못된 숫자 하나가 문서 전체의 신뢰를 무너뜨리기도 한다. 그래서 숫자를 쓰기 전에는 반드시 두 번 검산한다. 정확한 숫자는 가장 짧고 강력한 문장이다.",
+    "좋은 회의는 끝나는 시간이 정해져 있는 회의다. 마침이 없는 회의는 논의가 늘어지고, 늘어진 논의는 결론 없이 흩어진다. 회의를 시작할 때 오늘 결정할 것이 무엇인지 한 문장으로 말하고, 끝날 때 누가 언제까지 무엇을 하는지 확인하면 같은 한 시간도 밀도가 달라진다. 발언이 긴 사람보다 질문이 정확한 사람이 회의를 살린다. 모두가 말하는 회의보다 필요한 사람이 말하는 회의가 낫고, 자료를 읽어 주는 회의보다 자료를 미리 읽고 오는 회의가 낫다. 회의는 일을 만드는 자리가 아니라 일을 줄이는 자리여야 한다는 원칙을 기억해야 한다.",
+    "하루 중 가장 조용한 시간은 이른 아침이다. 전화도 메신저도 잠들어 있는 한두 시간 동안은 온전히 나의 속도로 일할 수 있다. 어렵고 중요한 일일수록 이 시간에 배치하면 좋다. 오후의 한 시간과 아침의 한 시간은 같은 육십 분이지만 밀도가 다르기 때문이다. 밤늦게까지 붙잡고 있던 문제가 아침에는 십 분 만에 풀리는 경험을 하고 나면, 시간을 늘리는 것보다 시간의 질을 고르는 것이 중요하다는 사실을 알게 된다. 일찍 일어나는 것이 힘들다면 잠드는 시간을 먼저 당기면 된다. 아침은 의지가 아니라 설계로 만들어지는 것이다.",
+    "모르는 것을 모른다고 말하는 데는 용기가 필요하다. 회의에서 낯선 용어가 나왔을 때 아는 척 고개를 끄덕이면 그 순간은 편하지만, 모호함은 사라지지 않고 일 속에 숨어 있다가 반드시 더 큰 비용으로 돌아온다. 질문은 무지의 증거가 아니라 이해하려는 의지의 증거다. 경험이 많은 사람일수록 오히려 기초적인 질문을 서슴지 않는다. 정확히 이해하는 것이 빨리 아는 척하는 것보다 결국 빠르다는 사실을 알기 때문이다. 좋은 질문 하나가 열 장의 보고서보다 일을 앞으로 보낼 때가 있다. 묻는 사람이 배우고, 배우는 사람이 성장한다.",
+    "좋은 아이디어는 예고 없이 찾아오고, 잡아 두지 않으면 소리 없이 사라진다. 그래서 늘 메모할 준비를 해 둔다. 지하철을 기다리다가, 회의가 끝나고 복도를 걷다가 떠오른 생각을 짧게라도 적어 두면, 나중에 그 한 줄이 문서의 뼈대가 되고 문제의 해법이 된다. 메모는 완성된 문장일 필요가 없다. 단어 몇 개와 화살표 하나면 충분하다. 중요한 것은 기록의 형식이 아니라 놓치지 않겠다는 태도다. 머리는 생각하는 데 쓰고, 저장은 종이와 화면에 맡긴다. 기억을 믿는 사람은 잊어버리고, 기록을 믿는 사람은 남긴다. 그 차이가 시간이 지날수록 벌어진다.",
+    "모니터 앞에 오래 앉아 있는 사람에게 가장 흔한 직업병은 거창한 것이 아니라 굳은 어깨와 뻣뻣한 목이다. 한 시간에 한 번 자리에서 일어나 어깨를 돌리고 목을 늘이는 삼 분이 물리치료 열 번보다 나을 수 있다. 몸은 정직해서 미룬 만큼 반드시 청구서를 보낸다. 건강을 잃고 나서야 건강을 생각하는 것은 순서가 늦다. 의자 높이를 맞추고, 모니터를 눈높이에 두고, 손목이 꺾이지 않게 키보드 위치를 조정하는 작은 조치들이 십 년 뒤의 몸을 결정한다. 일을 오래 하고 싶다면 먼저 몸을 아껴야 한다. 몸이 자본이라는 말은 사무직에게도 똑같이 적용된다.",
+  ],
+  proverb: [
+    "가는 말이 고와야 오는 말이 곱다. 내가 먼저 상대를 존중하고 따뜻하게 대하면, 상대도 나에게 같은 마음으로 답하기 마련이다.",
+    "백지장도 맞들면 낫다. 아무리 쉬운 일이라도 여럿이 힘을 합치면 더 수월해지니, 혼자 끙끙대지 말고 함께 나누는 지혜가 필요하다.",
+    "공든 탑이 무너지랴. 정성을 다하여 차곡차곡 쌓아 올린 노력은 쉽게 무너지지 않으니, 무슨 일이든 성실하게 임하는 자세가 중요하다.",
+    "티끌 모아 태산이라 하였다. 보잘것없어 보이는 작은 것도 꾸준히 모으면 큰 것을 이루니, 사소한 것을 가벼이 여기지 말아야 한다.",
+    "돌다리도 두들겨 보고 건너라. 잘 아는 일이라도 신중하게 확인하고 행동하면 실수를 줄일 수 있으니, 방심은 늘 사고의 씨앗이 된다.",
+    "열 번 찍어 아니 넘어가는 나무 없다. 끈기를 가지고 거듭 노력하면 아무리 어려운 일도 결국 이루어지니, 중도에 포기하지 말아야 한다.",
+    "우물을 파도 한 우물을 파라. 이것저것 손대기보다 한 가지에 집중하여 끝까지 파고들어야, 비로소 깊은 성취와 전문성을 얻을 수 있다.",
+    "급할수록 돌아가라. 마음이 조급할 때일수록 서두르지 말고 차분하게 정도를 밟아야, 도리어 실수 없이 빠르게 일을 마칠 수 있다.",
+    "고생 끝에 낙이 온다. 힘들고 어려운 시간을 견디고 나면 반드시 좋은 날이 찾아오니, 지금의 고됨을 너무 두려워할 필요는 없다.",
+    "아는 길도 물어 가라. 익숙하고 잘 아는 일이라도 신중하게 확인하며 나아가면, 뜻밖의 실수나 사고를 미리 막을 수 있는 법이다.",
+    "윗물이 맑아야 아랫물이 맑다. 윗사람이 먼저 모범을 보여야 아랫사람도 그를 따르니, 책임 있는 자리일수록 솔선수범이 중요하다.",
+    "구슬이 서 말이라도 꿰어야 보배다. 아무리 좋은 재료와 자질이 있어도 정성껏 다듬고 완성해야, 비로소 진정한 가치를 발휘하는 법이다.",
+    "낙숫물이 댓돌을 뚫는다. 작은 힘이라도 꾸준히 이어지면 단단한 돌도 뚫어 내니, 끈기 앞에서는 어떤 어려움도 결국 길을 내어 준다.",
+    "첫술에 배부르랴. 무슨 일이든 단번에 만족스러운 결과를 얻기는 어려우니, 조급해하지 말고 한 술 한 술 차근차근 쌓아 가야 한다.",
+    "등잔 밑이 어둡다. 가까이 있는 것일수록 오히려 알아차리기 어려우니, 익숙한 곳부터 다시 살피는 습관이 뜻밖의 답을 찾아 준다.",
+  ],
+  english: [
+    "Good morning. Thank you for joining the meeting today. Let us begin by reviewing the agenda and then move on to the main discussion points.",
+    "Could you please send me the report by the end of the day? I would like to review it before our call tomorrow afternoon. Thank you very much.",
+    "I am writing to follow up on our previous conversation. Please let me know if you have any questions or need further information from our side.",
+    "It was a pleasure meeting you today. I look forward to working together and building a strong partnership between our two companies in the future.",
+    "Please find the attached document for your review. If any changes are needed, feel free to share your feedback and I will update it accordingly.",
+    "We appreciate your patience and understanding. Our team is working hard to resolve the issue, and we will get back to you as soon as possible.",
+    "Let me know what time works best for you. I am available most afternoons this week, and I am happy to adjust the schedule to fit your calendar.",
+    "Thank you for your continued support. We value our relationship and remain committed to providing the best possible service to all our clients.",
+    "I apologize for the delay in my response. I needed to confirm the details with our team before getting back to you with an accurate answer.",
+    "Please do not hesitate to reach out if you have any concerns. We are always here to help and would be glad to assist you in any way we can.",
+    "The project is progressing well and remains on schedule. We expect to complete the final phase by the end of next month as originally planned.",
+    "Congratulations on the successful launch. Your hard work and dedication have truly paid off, and we are proud to have you on our team.",
+  ],
+};/* ═══════════════════════════════════════════════════════════
+   HHKB RESONANCE — Typing Engine v6
+   monkeytype / 한컴타자 스타일 재설계
+
+   핵심 입력 모델:
+   - state.typed[]: 사용자가 친 모든 글자를 위치별로 기록
+     각 원소 = { ch: '친 글자', correct: true/false }
+   - 오타가 나도 pos는 계속 전진 → 끊김 없는 진행
+   - 한글은 IME 조합이 끝난 확정 글자만 비교
+   - 커서는 항상 pos(다음에 칠 자리)에 표시
+   ═══════════════════════════════════════════════════════════ */
+
+const state = {
+  text: '',
+  chars: [],          // [...text] 분해 (자모 단위 아닌 완성형 단위)
+  typed: [],          // [{ ch, correct }] 위치별 입력 기록
+  pos: 0,             // 다음에 칠 위치 (= 지금까지 친 글자 수)
+  startTime: null,
+  endTime: null,
+  lastKeyTime: null,
+  intervals: [],      // 키 간 간격(ms)
+  finished: false,
+  category: 'mixed',
+  soundOn: true,
+  awaitingSubmit: false,  // 지문을 다 쳤고 Enter 제출을 기다리는 상태
+  composing: null,    // 한글 IME 조합 중인 글자 (예: 'ㄱ' → '가' → '값'). 미확정 상태.
+};
+
+/* ═══════════════════════════════════════════════════════════
+   DOM
+   ═══════════════════════════════════════════════════════════ */
+const $text = document.getElementById('textDisplay');
+const $source = document.getElementById('sourceTag');
+const $cpm = document.getElementById('cpm');
+const $wpmMini = document.getElementById('wpmMini');
+const $acc = document.getElementById('accuracy');
+const $con = document.getElementById('consistency');
+const $int = document.getElementById('interval');
+const $canvas = document.getElementById('waveform');
+const ctx = $canvas.getContext('2d');
+const $overlay = document.getElementById('completeOverlay');
+const $soundToggle = document.getElementById('soundToggle');
+const $progress = document.getElementById('progressFill');
+const $wordCount = document.getElementById('wordCount');
+const $hiddenInput = document.getElementById('hiddenInput');
+const $focusHint = document.getElementById('focusHint');
+const $submitHint = document.getElementById('submitHint');
+
+/* ═══════════════════════════════════════════════════════════
+   AUDIO — HHKB Type-S "thock"
+   ═══════════════════════════════════════════════════════════ */
+let audioCtx = null;
+function initAudio() {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    // 브라우저 정책으로 일시정지된 컨텍스트는 사용자 입력 시점에 재개
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(() => {});
+    }
+  } catch (err) {
+    audioCtx = null;  // 오디오 불가 환경에서도 타이핑은 계속되어야 함
+  }
+}
+
+function playThock(isError = false) {
+  if (!state.soundOn) return;
+  try {
+  initAudio();
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+
+  // body: low sine
+  const osc = audioCtx.createOscillator();
+  const oscGain = audioCtx.createGain();
+  osc.type = 'sine';
+  const baseFreq = isError ? 92 : 132 + (Math.random() * 18 - 9);
+  osc.frequency.setValueAtTime(baseFreq, now);
+  osc.frequency.exponentialRampToValueAtTime(baseFreq * 0.6, now + 0.05);
+  oscGain.gain.setValueAtTime(0, now);
+  oscGain.gain.linearRampToValueAtTime(isError ? 0.07 : 0.11, now + 0.003);
+  oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+  osc.connect(oscGain); oscGain.connect(audioCtx.destination);
+  osc.start(now); osc.stop(now + 0.1);
+
+  // click: noise
+  const bufferSize = audioCtx.sampleRate * 0.02;
+  const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const noiseData = noiseBuffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) noiseData[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.15));
+  const noise = audioCtx.createBufferSource(); noise.buffer = noiseBuffer;
+  const nf = audioCtx.createBiquadFilter(); nf.type = 'bandpass'; nf.frequency.value = isError ? 1700 : 2400; nf.Q.value = 2;
+  const ng = audioCtx.createGain(); ng.gain.setValueAtTime(0.035, now); ng.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+  noise.connect(nf); nf.connect(ng); ng.connect(audioCtx.destination); noise.start(now);
+
+  // sub
+  const sub = audioCtx.createOscillator(); const sg = audioCtx.createGain();
+  sub.type = 'triangle'; sub.frequency.setValueAtTime(62, now);
+  sg.gain.setValueAtTime(0, now); sg.gain.linearRampToValueAtTime(0.045, now + 0.005); sg.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+  sub.connect(sg); sg.connect(audioCtx.destination); sub.start(now); sub.stop(now + 0.09);
+  } catch (err) {
+    // 오디오 실패는 조용히 무시 — 입력 흐름을 절대 막지 않는다
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TEXT LOADING
+   ═══════════════════════════════════════════════════════════ */
+let lastTextIndex = -1;
+let lastCategory = null;
+
+function pickText() {
+  let pool, cat;
+  if (state.category === 'mixed') {
+    const cats = ['quote', 'proverb', 'safety', 'business', 'number', 'law', 'english', 'tech', 'stock', 'keyboard'];
+    cat = cats[Math.floor(Math.random() * cats.length)];
+    pool = CORPUS[cat];
+  } else {
+    cat = state.category;
+    pool = CORPUS[cat];
+  }
+
+  // 직전과 같은 지문 안 나오게
+  let idx;
+  let guard = 0;
+  do {
+    idx = Math.floor(Math.random() * pool.length);
+    guard++;
+  } while (pool.length > 1 && cat === lastCategory && idx === lastTextIndex && guard < 20);
+
+  lastTextIndex = idx;
+  lastCategory = cat;
+  return { text: pool[idx], source: getSourceLabel(cat) };
+}
+
+function getSourceLabel(cat) {
+  return {
+    quote: '주제 · 명언과 문장',
+    proverb: '주제 · 속담과 격언',
+    longform: '주제 · 장문 긴글 연습',
+    safety: '주제 · 안전보건 실무',
+    business: '주제 · 비즈니스 문서',
+    number: '주제 · 숫자와 기호 혼합',
+    fnlayer: '훈련 · Fn 레이어 숫자 집중 (밀도 31%)',
+    law: '출처 · 산업안전보건법 / 중대재해처벌법',
+    english: 'topic · business english',
+    tech: 'source · apple & it',
+    stock: 'source · us equities',
+    keyboard: 'source · mechanical keyboard',
+  }[cat];
+}
+
+// 지문을 화면에 적용 (일반 모드/검정 모드 공용)
+function applyText(text, source) {
+  clearCompleteTimer();   // 이전 지문의 완료 화면 예약을 무효화
+  state.text = text;
+  state.chars = [...text];
+  state.typed = [];
+  state.pos = 0;
+  state.startTime = null;
+  state.endTime = null;
+  state.lastKeyTime = null;
+  state.intervals = [];
+  state.finished = false;
+  state.composing = null;
+  setAwaitingSubmit(false);
+  $source.textContent = source;
+  // 280자 이상 장문은 글씨를 줄여 화면에 편하게 표시
+  $text.classList.toggle('longform', text.length >= 280);
+  renderText();
+  updateStats();
+  clearWaveform();
+  resetInput();
+}
+
+function loadNewText() {
+  cancelExam();  // 일반 지문 로드는 진행 중인 검정을 취소
+  const { text, source } = pickText();
+  applyText(text, source);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   RENDERING
+   각 글자를 상태에 따라 표시:
+   - i < pos 이고 정타 → correct (먹색)
+   - i < pos 이고 오타 → incorrect (빨강, 사용자가 친 글자 표시)
+   - i >= pos → pending (회색, 원본 글자)
+   ═══════════════════════════════════════════════════════════ */
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* 글자 i의 표시 상태(클래스/문자)를 계산.
+   전체 렌더링과 증분 갱신이 이 함수 하나를 공유해 불일치를 원천 차단. */
+function charState(i) {
+  const original = state.chars[i];
+  const isSpace = original === ' ';
+  let cls = 'char';
+  if (isSpace) cls += ' space';
+
+  let shown;
+  if (i < state.pos && state.typed[i]) {
+    if (state.typed[i].correct) {
+      cls += ' correct';
+      shown = original;
+    } else {
+      cls += ' incorrect';
+      // 오타: 사용자가 실제로 친 글자를 표시
+      const typedCh = state.typed[i].ch;
+      shown = (typedCh === ' ' || typedCh === '') ? original : typedCh;
+    }
+  } else if (i === state.pos && state.composing) {
+    // 한글 조합 중: 미확정 글자를 실시간 표시
+    cls += ' composing';
+    shown = state.composing;
+  } else {
+    cls += ' pending';
+    shown = original;
+  }
+  return { cls, shown };
+}
+
+function charSpanHtml(i) {
+  const { cls, shown } = charState(i);
+  return `<span class="${cls}" data-i="${i}">${escapeHtml(shown)}</span>`;
+}
+
+/* 전체 렌더링 (지문 로드 시 1회).
+   단어 단위 .word 래퍼(inline-block)로 묶어 단어가 줄 끝에서
+   중간에 잘리지 않게 한다. 공백은 앞 단어의 꼬리로 포함시켜
+   줄바꿈이 항상 단어 경계에서만 일어나도록 한다. */
+function renderText() {
+  const parts = [];
+  let word = [];
+  const flushWord = () => {
+    if (word.length) { parts.push('<span class="word">' + word.join('') + '</span>'); word = []; }
+  };
+  for (let i = 0; i < state.chars.length; i++) {
+    word.push(charSpanHtml(i));
+    if (state.chars[i] === ' ') flushWord();  // 공백까지 포함해 단어 마감
+  }
+  flushWord();
+
+  const cursor = document.getElementById('cursor');
+  $text.innerHTML = parts.join('');
+  if (cursor) $text.appendChild(cursor);
+
+  requestAnimationFrame(updateCursor);
+  updateProgress();
+}
+
+/* 증분 갱신: 바뀐 글자만 클래스/내용을 교체.
+   매 타건마다 전체 innerHTML을 재생성하던 것을 대체해
+   장문(340자)에서도 키 하나당 스팬 2~3개만 갱신한다. */
+function updateCharAt(i) {
+  if (i < 0 || i >= state.chars.length) return;
+  const el = $text.querySelector(`.char[data-i="${i}"]`);
+  if (!el) return;
+  const { cls, shown } = charState(i);
+  if (el.className !== cls) el.className = cls;
+  const html = escapeHtml(shown);
+  if (el.innerHTML !== html) el.innerHTML = html;
+}
+
+function updateCharRange(from, to) {
+  const a = Math.max(0, Math.min(from, to));
+  const b = Math.min(state.chars.length - 1, Math.max(from, to));
+  for (let i = a; i <= b; i++) updateCharAt(i);
+  requestAnimationFrame(updateCursor);
+  updateProgress();
+}
+
+function updateProgress() {
+  const total = state.chars.length;
+  const pct = total > 0 ? (state.pos / total) * 100 : 0;
+  $progress.style.width = pct + '%';
+  $wordCount.textContent = `${state.pos} / ${total}`;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CURSOR — 글자 왼쪽에 세로 막대(beam) 형태
+   monkeytype처럼 다음에 칠 글자 앞에 위치
+   ═══════════════════════════════════════════════════════════ */
+let cursorTypingTimer = null;
+
+function updateCursor() {
+  const cursor = document.getElementById('cursor');
+  if (!cursor) return;
+
+  const textRect = $text.getBoundingClientRect();
+  const cs = window.getComputedStyle($text);
+  const fontSize = parseFloat(cs.fontSize);
+
+  // 기준 글자: 진행 중이면 다음에 칠 글자, 완료면 마지막 글자
+  const atEnd = state.pos >= state.chars.length;
+  const refIndex = atEnd ? state.chars.length - 1 : state.pos;
+  const span = $text.querySelector(`.char[data-i="${refIndex}"]`);
+  if (!span) { cursor.style.opacity = '0'; return; }
+
+  const r = span.getBoundingClientRect();
+  // x: 진행 중이면 글자 왼쪽, 완료면 마지막 글자 오른쪽
+  const x = (atEnd ? r.right : r.left) - textRect.left;
+
+  // y/높이: 글자 사각형에 직접 맞춘다.
+  // .char가 inline이므로 r은 글자 영역(글꼴 상자)을 그대로 반환한다.
+  // line-height를 더하던 기존 방식은 inline 전환 후 커서를 아래로 밀어냈다.
+  const h = Math.max(r.height, fontSize * 1.05);
+  const y = (r.top - textRect.top) + (r.height - h) / 2;
+
+  cursor.style.opacity = '';
+  cursor.style.height = h + 'px';
+  cursor.style.transform = `translate(${x}px, ${y}px)`;
+}
+
+function pulseCursorTyping() {
+  const cursor = document.getElementById('cursor');
+  if (!cursor) return;
+  cursor.classList.add('typing');
+  if (cursorTypingTimer) clearTimeout(cursorTypingTimer);
+  cursorTypingTimer = setTimeout(() => cursor.classList.remove('typing'), 600);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   INPUT — IME-safe, monkeytype 스타일
+   
+   숨겨진 input의 value를 "정답 그대로" 유지하지 않고,
+   사용자가 친 그대로 받아서 위치별로 비교 기록한다.
+   오타가 나도 pos를 전진시켜 계속 진행 (막지 않음).
+   ═══════════════════════════════════════════════════════════ */
+let isComposing = false;
+let lastValue = '';
+
+function focusInput() {
+  $hiddenInput.focus();
+  caretToEnd();
+  $focusHint.classList.remove('show');
+}
+
+function resetInput() {
+  $hiddenInput.value = '';
+  $hiddenInput.readOnly = false;  // 완료 시 걸어둔 비활성화 해제
+  lastValue = '';
+  isComposing = false;
+  state.composing = null;
+}
+
+// 클릭으로 포커스 복원 (완료 화면/버튼 제외)
+document.addEventListener('click', (e) => {
+  if (e.target.closest('button')) return;
+  if (state.finished) return;
+  focusInput();
+});
+
+// 버튼 클릭 시 hidden input의 포커스를 빼앗지 않도록 mousedown 기본동작 차단.
+// (버튼이 포커스를 가져가면 blur → 포커스 힌트 오버레이가 mouseup 전에 화면을
+//  덮어버려 click이 버튼에 도달하지 못하는 레이스가 발생했음)
+document.addEventListener('mousedown', (e) => {
+  if (e.target.closest('button')) e.preventDefault();
+});
+
+// blur 시 힌트를 즉시 띄우지 않고 잠깐 기다렸다가, 그 사이 포커스가
+// 복귀하지 않은 경우에만 표시 (버튼 클릭 흐름을 방해하지 않기 위함)
+let blurHintTimer = null;
+$hiddenInput.addEventListener('blur', () => {
+  if (blurHintTimer) clearTimeout(blurHintTimer);
+  blurHintTimer = setTimeout(() => {
+    if (!state.finished && document.activeElement !== $hiddenInput) {
+      $focusHint.classList.add('show');
+    }
+  }, 150);
+});
+$hiddenInput.addEventListener('focus', () => {
+  if (blurHintTimer) clearTimeout(blurHintTimer);
+  $focusHint.classList.remove('show');
+});
+
+// 완료 화면에서 다음으로 진행하는 단일 진입점.
+// 키(keydown/keyup), Continue 버튼, 오버레이 클릭이 모두 이 함수를 거치며
+// 150ms 가드로 중복 진행을 막는다.
+// 같은 이벤트가 window/document 양쪽 리스너에 도달하거나 버튼→오버레이로
+// 버블링될 때, 동일 이벤트 객체에 표시를 남겨 정확히 한 번만 처리한다.
+// (시간 기반 가드는 서로 다른 목적의 동작끼리 간섭하므로 쓰지 않는다)
+function claimEvent(e) {
+  if (e.__hhkbHandled) return false;
+  e.__hhkbHandled = true;
+  return true;
+}
+
+// 완료 화면이 실제로 화면에 떠 있는가. 키 조작의 유일한 기준선.
+function isCompleteScreenVisible() {
+  return $overlay.classList.contains('show');
+}
+
+/* 지문을 끝까지 친 상태(제출 대기)를 전환한다.
+   한컴타자처럼 "다 치고 Enter로 제출"하는 흐름을 위해,
+   마지막 글자에서 바로 결과를 띄우지 않고 여기서 멈춘다.
+   이때 기록 시각을 얼려 두어, 제출을 망설이는 동안 타수가 깎이지 않게 한다. */
+function setAwaitingSubmit(on) {
+  state.awaitingSubmit = on;
+  if (on) {
+    if (state.endTime === null) state.endTime = performance.now();  // 타이밍 동결
+  } else {
+    state.endTime = null;  // 되돌아가면 다시 시간이 흐른다
+  }
+  if ($submitHint) $submitHint.classList.toggle('show', on);
+  updateStats();
+}
+
+// finish()가 예약한 완료 화면 표시 타이머. 새 지문을 로드할 때 반드시 취소해
+// 이전 지문의 완료 화면이 새 지문 위에 뒤늦게 뜨는 일을 막는다.
+let completeTimer = null;
+function clearCompleteTimer() {
+  if (completeTimer) { clearTimeout(completeTimer); completeTimer = null; }
+}
+
+// 완료 화면 → 다음 지문. keydown과 keyup은 별개의 이벤트라
+// 이 경로만 짧은 시간 가드로 중복 진행을 막는다.
+let lastAdvance = 0;
+function advanceFromComplete() {
+  const now = Date.now();
+  if (now - lastAdvance < 150) return;
+  lastAdvance = now;
+  $overlay.classList.remove('show');
+  loadNewText();
+  focusInput();
+}
+
+// 완료 상태 keyup 폴백: macOS IME가 keydown을 삼켜도 keyup은 대체로 도달한다.
+function handleFinishedKeyup(e) {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  // 제출 대기 중 Enter의 keyup 폴백: IME가 keydown을 삼켜도 제출되게 한다.
+  if (!state.finished && state.awaitingSubmit) {
+    const isEnterUp = e.key === 'Enter' || e.code === 'Enter' || e.keyCode === 13;
+    if (isEnterUp) {
+      if (!claimEvent(e)) return;
+      e.preventDefault();
+      finish();
+    }
+    return;
+  }
+  if (!state.finished) return;
+  // 완료 화면이 화면에 실제로 나타난 뒤에만 키로 넘길 수 있다.
+  // 이 가드가 없으면 "지문의 마지막 글자를 친 그 키의 keyup"이
+  // 완료 화면을 보기도 전에 넘겨버려, 새 지문 위에 완료 화면이
+  // 겹친 채 아무 조작도 먹지 않는 상태가 된다.
+  if (!isCompleteScreenVisible()) return;
+  if (examState.active && !examState.resultShown) return;  // 검정 라운드 전환 중 보호
+  if (!claimEvent(e)) return;
+  e.preventDefault();
+  advanceFromComplete();
+}
+
+const CARET_KEYS = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown']);
+
+// 단축키 핸들러 (window + document 양쪽 capture로 이중 등록하여
+// 어떤 포커스 상태에서도 키가 확실히 잡히도록 함)
+function handleShortcutKey(e) {
+  const isEnter = e.key === 'Enter' || e.code === 'Enter' || e.keyCode === 13;
+  const isEsc = e.key === 'Escape' || e.code === 'Escape' || e.keyCode === 27;
+  const isTab = e.key === 'Tab' || e.code === 'Tab' || e.keyCode === 9;
+  // macOS 한글 입력기가 키를 가로채면 key='Process', keyCode=229로 올 수 있음.
+  const isImeProcess = e.key === 'Process' || e.keyCode === 229 || e.isComposing;
+
+  // ── 완료 상태: 거의 모든 키로 다음 지문 진행 ──
+  // (IME가 Enter를 가로채 key값이 바뀌어도 넘어갈 수 있게 관대하게 처리.
+  //  단, 새로고침/개발자도구 등 조합키는 제외)
+  if (state.finished) {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;  // 단축키 조합은 무시
+    // 완료 화면이 아직 안 보이는 연출 구간(350ms)에는 키를 삼킨다.
+    // 마지막 글자를 치자마자 이어 누른 키가 결과를 건너뛰지 않도록.
+    if (!isCompleteScreenVisible()) { e.preventDefault(); return; }
+    // 검정 라운드 전환 대기 중(자동 진행)에는 키 입력을 무시해
+    // 실수로 검정이 끊기지 않게 함. 최종 결과 화면에서만 키로 종료.
+    if (examState.active && !examState.resultShown) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    if (!claimEvent(e)) return;
+    advanceFromComplete();
+    return;
+  }
+
+  // ── 진행 중 ──
+  // 캐럿을 옮기거나 내용을 통째로 바꾸는 키는 막는다 (진행 상황 보호).
+  // 새로고침(Cmd+R) 같은 다른 조합키는 건드리지 않는다.
+  const k = (e.key || '').toLowerCase();
+  if (e.metaKey || e.ctrlKey) {
+    if (k === 'a' || k === 'z' || k === 'y') e.preventDefault();
+    return;
+  }
+  if (CARET_KEYS.has(e.key)) { e.preventDefault(); return; }
+
+  // 입력창이 포커스를 잃은 상태에서 키를 누르면 즉시 되찾는다.
+  // keydown 단계에서 포커스를 옮기면 그 키의 글자도 입력창으로 들어간다.
+  if (document.activeElement !== $hiddenInput && !e.altKey) focusInput();
+
+  if (isEsc || isTab) {
+    e.preventDefault();
+    if (!claimEvent(e)) return;  // window/document 이중 등록 중복만 차단
+    loadNewText();
+    focusInput();
+    return;
+  }
+  if (isEnter) {
+    e.preventDefault();  // 진행 중 Enter는 글자 입력으로 처리하지 않음
+    // 지문을 끝까지 쳤다면 Enter가 "제출" 역할을 한다 (한컴타자 방식)
+    if (state.awaitingSubmit) {
+      if (!claimEvent(e)) return;
+      finish();
+    }
+  }
+}
+
+// 다른 창에 다녀오면 클릭 없이 바로 이어 칠 수 있게 입력창을 되찾는다
+window.addEventListener('focus', () => { if (!state.finished) focusInput(); });
+
+document.addEventListener('keydown', handleShortcutKey, true);
+window.addEventListener('keydown', handleShortcutKey, true);
+document.addEventListener('keyup', handleFinishedKeyup, true);
+window.addEventListener('keyup', handleFinishedKeyup, true);
+
+// IME 조합 추적
+// 핵심: 조합 중인 글자(ㄱ→가→값)를 실시간으로 현재 칸에 표시해
+// 한글 입력의 지연감을 없앤다. 정오 판정은 조합 완료(compositionend) 시점에만.
+// 붙여넣기/드래그 앤 드롭 차단 — 타자 연습과 검정의 무결성을 지킨다.
+$hiddenInput.addEventListener('paste', (e) => e.preventDefault());
+$hiddenInput.addEventListener('drop', (e) => e.preventDefault());
+
+$hiddenInput.addEventListener('compositionstart', () => {
+  isComposing = true;
+});
+
+$hiddenInput.addEventListener('compositionend', (e) => {
+  isComposing = false;
+  // 조합이 끝났으므로 미확정 표시를 지우고
+  state.composing = null;
+  // 확정된 글자를 정식으로 판정 처리 (input 이벤트가 따라오지만
+  // 타이밍 일관성을 위해 여기서 직접 처리하고, 뒤이은 input은 중복 방지됨)
+  const finalValue = e.target.value;
+  if (finalValue !== lastValue) {
+    processInput(finalValue);
+  } else {
+    // 값 변화가 없으면 조합 표시만 해당 칸에서 정리 (증분)
+    updateCharAt(state.pos);
+    requestAnimationFrame(updateCursor);
+  }
+});
+
+$hiddenInput.addEventListener('input', (e) => {
+  if (isComposing) {
+    // 조합 중: 판정하지 않고, 조합 중인 글자만 추출해 실시간 표시.
+    // e.target.value에서 "이미 확정된 부분(lastValue)" 이후가 조합 중인 글자.
+    const composingPart = e.target.value.slice(lastValue.length);
+    state.composing = composingPart.length > 0 ? composingPart : null;
+    updateCharAt(state.pos);  // 증분: 조합 중인 칸만 갱신
+    requestAnimationFrame(updateCursor);
+    pulseCursorTyping();
+    return;
+  }
+  // 조합과 무관한 일반 입력 (영문, 숫자, 공백 등)
+  processInput(e.target.value);
+});
+
+/* ───────────────────────────────────────────────────────────
+   processInput: value의 변화를 분석해 typed[] 갱신
+   - 길이 증가 → 새 글자 입력 (정타/오타 판정 후 pos 전진)
+   - 길이 감소 → Backspace (pos 후퇴)
+   ─────────────────────────────────────────────────────────── */
+function processInput(currentValue) {
+  if (state.finished) { lastValue = currentValue; return; }
+
+  const prev = lastValue;
+  const curr = currentValue;
+  if (curr === prev) return;
+
+  // 이전 값과 현재 값의 "공통 앞부분" 뒤에서 무엇이 지워지고 무엇이 더해졌는지 본다.
+  // 단순히 길이만 비교하면, 캐럿이 중간으로 옮겨졌거나 선택 영역이 통째로
+  // 교체된 경우(IME 재변환 등)에 엉뚱한 글자를 친 것으로 판정하게 된다.
+  let k = 0;
+  const m = Math.min(prev.length, curr.length);
+  while (k < m && prev[k] === curr[k]) k++;
+  let removeCount = prev.length - k;
+  let added = [...curr.slice(k)];
+
+  // 맨 끝이 아닌 곳에 글자가 끼어든 경우: 끼어든 글자를 "끝에 친 것"으로 본다.
+  // (지문은 항상 끝에서만 이어 치는 것이므로, 앞부분을 지운 것으로 처리하면
+  //  이미 친 내용이 통째로 날아간다)
+  if (removeCount > 0 && curr.length > prev.length && curr.endsWith(prev.slice(k))) {
+    added = [...curr.slice(k, k + (curr.length - prev.length))];
+    removeCount = 0;
+  }
+
+  const posBefore = state.pos;
+
+  // ── 지워진 만큼 되돌리기 ──
+  for (let i = 0; i < removeCount; i++) {
+    if (state.pos > 0) {
+      state.pos--;
+      state.typed[state.pos] = undefined;
+    }
+  }
+  state.typed.length = state.pos;
+  if (removeCount > 0 && state.awaitingSubmit) setAwaitingSubmit(false);  // 지우면 다시 진행 중
+  const posLow = state.pos;
+
+  // ── 더해진 글자 판정 ──
+  for (const ch of added) {
+    if (state.pos >= state.chars.length) break;  // 지문 끝 넘어가면 무시
+
+    const expected = state.chars[state.pos];
+    const correct = (ch === expected);
+
+    // 타이밍 기록
+    const now = performance.now();
+    if (state.startTime === null) {
+      state.startTime = now;
+      state.lastKeyTime = now;
+    } else {
+      const gap = now - state.lastKeyTime;
+      if (gap < 3000) {
+        state.intervals.push(gap);
+        pushWaveform(gap);
+      }
+      state.lastKeyTime = now;
+    }
+
+    state.typed[state.pos] = { ch, correct };
+    state.pos++;
+    playThock(!correct);
+  }
+
+  syncInputValue();
+  updateCharRange(posLow, Math.max(posBefore, state.pos));  // 증분: 바뀐 구간만 갱신
+  updateStats();
+  pulseCursorTyping();
+
+  // 지문 끝에 도달: 바로 끝내지 않고 Enter 제출을 기다린다.
+  if (state.pos >= state.chars.length && !state.awaitingSubmit) {
+    setAwaitingSubmit(true);
+  }
+}
+
+// hidden input의 value를 typed[]와 동기화 (길이 = pos)
+// 실제 친 글자를 그대로 유지하여 Backspace 동작이 자연스럽게 함
+function syncInputValue() {
+  let v = '';
+  for (let i = 0; i < state.pos; i++) {
+    v += state.typed[i] ? state.typed[i].ch : state.chars[i];
+  }
+  $hiddenInput.value = v;
+  lastValue = v;
+  caretToEnd();
+}
+
+// 숨겨진 입력창의 캐럿은 항상 맨 끝에 둔다 (지문은 끝에서만 이어 친다)
+function caretToEnd() {
+  try {
+    const n = $hiddenInput.value.length;
+    $hiddenInput.setSelectionRange(n, n);
+  } catch (err) { /* 포커스가 없거나 지원하지 않는 환경: 무시 */ }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   STATS
+   - CPM (타수): 분당 친 글자 수 (한글 타자 표준에 가까움)
+   - WPM: 영문 단어 기준 (5글자 = 1단어)
+   - 정확도: 정타 / 전체 입력
+   - 일관성: 키 간격의 변동계수 기반
+   ═══════════════════════════════════════════════════════════ */
+/* 한글 한 글자의 타수(자모 수)를 계산. 두벌식 표준.
+   "값" = ㄱ+ㅏ+ㅂ+ㅅ = 4타, "안" = ㅇ+ㅏ+ㄴ = 3타.
+   영문/숫자/기호/공백은 1타. */
+// 중성 인덱스(0~20)별 키 입력 수. 이중모음 ㅘㅙㅚㅝㅞㅟㅢ는 2타.
+const JUNG_KEYS = [1,1,1,1,1,1,1,1,1,2,2,2,1,1,2,2,2,1,1,2,1];
+// 종성 인덱스(0~27)별 키 입력 수. 0=받침없음. 겹받침은 2타.
+const JONG_KEYS = [0,1,1,2,1,2,2,1,1,2,2,2,2,2,2,2,1,1,2,1,1,1,1,1,1,1,1,1];
+
+function strokeCountOf(ch) {
+  const code = ch.charCodeAt(0);
+  // 한글 완성형 가(AC00) ~ 힣(D7A3)
+  if (code >= 0xAC00 && code <= 0xD7A3) {
+    const offset = code - 0xAC00;
+    const jong = offset % 28;                    // 종성 인덱스 (0=없음)
+    const jung = Math.floor(offset / 28) % 21;   // 중성 인덱스
+    // 초성 항상 1타 + 중성 + 종성
+    return 1 + JUNG_KEYS[jung] + JONG_KEYS[jong];
+  }
+  // 자모 단독 (ㄱ, ㅏ 등)
+  if (code >= 0x3131 && code <= 0x3163) return 1;
+  // 영문/숫자/기호/공백: 1타
+  return 1;
+}
+
+function computeStats() {
+  const elapsedMs = state.startTime
+    ? ((state.endTime || performance.now()) - state.startTime)
+    : 0;
+  const elapsedMin = elapsedMs / 60000;
+
+  const correctCount = state.typed.filter(t => t && t.correct).length;
+  const totalTyped = state.typed.filter(t => t).length;
+
+  // 한컴타자식 타수: 정타 글자들의 자모 수 합산
+  let correctStrokes = 0;
+  for (const t of state.typed) {
+    if (t && t.correct) correctStrokes += strokeCountOf(t.ch);
+  }
+
+  // 타수(분당): 자모 기준. 한글이면 글자보다 많고, 영문이면 글자 수와 동일.
+  const cpm = elapsedMin > 0 ? Math.round(correctStrokes / elapsedMin) : 0;
+  // WPM: 5타 = 1단어 (영문 표준)
+  const wpm = elapsedMin > 0 ? Math.round((correctStrokes / 5) / elapsedMin) : 0;
+
+  const acc = totalTyped > 0 ? Math.round((correctCount / totalTyped) * 100) : 100;
+
+  // 일관성
+  let consistency = null, avgInterval = null;
+  if (state.intervals.length >= 3) {
+    const mean = state.intervals.reduce((a, b) => a + b, 0) / state.intervals.length;
+    const variance = state.intervals.reduce((a, b) => a + (b - mean) ** 2, 0) / state.intervals.length;
+    const cv = Math.sqrt(variance) / mean;
+    consistency = Math.max(0, Math.min(100, Math.round(100 * (1 - cv))));
+    avgInterval = Math.round(mean);
+  }
+
+  return { cpm, wpm, acc, consistency, avgInterval, correctCount, totalTyped, correctStrokes };
+}
+
+function updateStats() {
+  const s = computeStats();
+  $cpm.innerHTML = `${s.cpm}<span class="stat-unit">타</span>`;
+  $wpmMini.textContent = `분당 타수`;
+  $acc.innerHTML = `${s.acc}<span class="stat-unit">%</span>`;
+  if (s.consistency !== null) {
+    $con.innerHTML = `${s.consistency}<span class="stat-unit">/100</span>`;
+    $int.innerHTML = `${s.avgInterval}<span class="stat-unit">ms</span>`;
+  } else {
+    $con.innerHTML = `—<span class="stat-unit">/100</span>`;
+    $int.innerHTML = `—<span class="stat-unit">ms</span>`;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   WAVEFORM
+   ═══════════════════════════════════════════════════════════ */
+let waveformData = [];
+const MAX_POINTS = 80;
+
+function resizeCanvas() {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = $canvas.getBoundingClientRect();
+  $canvas.width = rect.width * dpr;
+  $canvas.height = rect.height * dpr;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.scale(dpr, dpr);
+}
+
+function pushWaveform(interval) {
+  waveformData.push(interval);
+  if (waveformData.length > MAX_POINTS) waveformData.shift();
+  drawWaveform();
+}
+function clearWaveform() { waveformData = []; drawWaveform(); }
+
+function drawWaveform() {
+  const rect = $canvas.getBoundingClientRect();
+  const w = rect.width, h = rect.height;
+  ctx.clearRect(0, 0, w, h);
+
+  // baseline
+  ctx.strokeStyle = '#E2E2DF'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2); ctx.stroke();
+  ctx.strokeStyle = '#EDEDEA'; ctx.setLineDash([2, 4]);
+  ctx.beginPath();
+  ctx.moveTo(0, h * 0.25); ctx.lineTo(w, h * 0.25);
+  ctx.moveTo(0, h * 0.75); ctx.lineTo(w, h * 0.75);
+  ctx.stroke(); ctx.setLineDash([]);
+
+  if (waveformData.length < 2) return;
+
+  const maxInterval = 600;
+  const barWidth = w / MAX_POINTS;
+  const mean = waveformData.reduce((a, b) => a + b, 0) / waveformData.length;
+
+  waveformData.forEach((interval, i) => {
+    const x = i * barWidth + barWidth / 2;
+    const normalized = Math.min(interval / maxInterval, 1);
+    const barH = normalized * (h * 0.4);
+    const deviation = Math.abs(interval - mean) / mean;
+    ctx.fillStyle = deviation < 0.25 ? '#3A3A3A' : '#B8282E';
+    ctx.globalAlpha = 0.65 + (i / MAX_POINTS) * 0.35;
+    ctx.fillRect(x - barWidth * 0.28, h / 2 - barH, barWidth * 0.56, barH);
+    ctx.fillRect(x - barWidth * 0.28, h / 2, barWidth * 0.56, barH);
+  });
+  ctx.globalAlpha = 1;
+
+  ctx.strokeStyle = 'rgba(58,58,58,0.25)'; ctx.lineWidth = 1;
+  ctx.beginPath();
+  waveformData.forEach((interval, i) => {
+    const x = i * barWidth + barWidth / 2;
+    const normalized = Math.min(interval / maxInterval, 1);
+    const y = h / 2 - normalized * (h * 0.4);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   EXAM MODE — 타자 검정
+   한글 단문 3개 연속 → 합산 타수/정확도 → 등급 판정.
+   등급은 한컴타자 검정을 참고한 "자체 기준"이며 화면에 명시한다.
+   ═══════════════════════════════════════════════════════════ */
+const EXAM_ROUNDS = 3;
+const EXAM_POOL_CATS = ['quote', 'proverb', 'safety', 'business'];
+const examState = {
+  active: false, round: 0,
+  strokes: 0, correct: 0, total: 0, timeMs: 0,
+  usedKeys: new Set(), resultShown: false,
+};
+const $completeJp = document.querySelector('.complete-jp');
+const COMPLETE_JP_DEFAULT = $completeJp ? $completeJp.textContent : '';
+
+function pickExamText() {
+  let guard = 0;
+  while (guard++ < 60) {
+    const cat = EXAM_POOL_CATS[Math.floor(Math.random() * EXAM_POOL_CATS.length)];
+    const pool = CORPUS[cat];
+    const idx = Math.floor(Math.random() * pool.length);
+    const key = cat + ':' + idx;
+    if (!examState.usedKeys.has(key)) { examState.usedKeys.add(key); return pool[idx]; }
+  }
+  return CORPUS.quote[0];
+}
+
+function startExam() {
+  examState.active = true;
+  examState.round = 1;
+  examState.strokes = 0; examState.correct = 0; examState.total = 0; examState.timeMs = 0;
+  examState.usedKeys.clear();
+  examState.resultShown = false;
+  $overlay.classList.remove('show');
+  if ($completeJp) $completeJp.textContent = COMPLETE_JP_DEFAULT;
+  applyText(pickExamText(), `검정 모드 · 지문 ${examState.round} / ${EXAM_ROUNDS} — Esc 취소`);
+  focusInput();
+}
+
+function cancelExam() {
+  examState.active = false;
+  examState.resultShown = false;
+  if ($completeJp) $completeJp.textContent = COMPLETE_JP_DEFAULT;
+}
+
+// 자체 기준 등급표 (공인 검정 아님, 결과 화면에 기준 명시)
+function examGrade(cpm, acc) {
+  if (acc < 90) return { grade: '등급 외', note: '정확도 90% 미만' };
+  if (cpm >= 500) return { grade: '특급', note: '분당 500타 이상' };
+  if (cpm >= 400) return { grade: '1급', note: '분당 400타 이상' };
+  if (cpm >= 300) return { grade: '2급', note: '분당 300타 이상' };
+  if (cpm >= 200) return { grade: '3급', note: '분당 200타 이상' };
+  if (cpm >= 100) return { grade: '4급', note: '분당 100타 이상' };
+  return { grade: '5급', note: '분당 100타 미만' };
+}
+
+function showExamResult() {
+  examState.resultShown = true;
+  const min = examState.timeMs / 60000;
+  const cpm = min > 0 ? Math.round(examState.strokes / min) : 0;
+  const wpm = min > 0 ? Math.round((examState.strokes / 5) / min) : 0;
+  const acc = examState.total > 0 ? Math.round(examState.correct / examState.total * 100) : 100;
+  const g = examGrade(cpm, acc);
+  if ($completeJp) $completeJp.textContent = `검정 완료 — ${g.grade}`;
+  document.getElementById('finalCpm').innerHTML = `${cpm}<span class="s-unit">타</span>`;
+  document.getElementById('finalWpm').textContent = wpm;
+  document.getElementById('finalAcc').innerHTML = `${acc}<span class="s-unit">%</span>`;
+  document.getElementById('finalCon').textContent = '—';
+  document.getElementById('completeDetail').innerHTML =
+    `판정 <b>${g.grade}</b> (${g.note}) · ${EXAM_ROUNDS}개 지문 · 분당 <b>${cpm}</b>타 (총 ${examState.strokes}타) · ` +
+    `정확도 <b>${acc}%</b> · 소요 <b>${(examState.timeMs / 1000).toFixed(1)}초</b><br>` +
+    `자체 기준(분당 타수): 특급 500 · 1급 400 · 2급 300 · 3급 200 · 4급 100 이상 + 정확도 90% 이상 (공인 검정 아님)`;
+  $hiddenInput.blur();  // IME 컨텍스트 제거 (일반 완료와 동일한 이유)
+  clearCompleteTimer();
+  completeTimer = setTimeout(() => {
+    completeTimer = null;
+    $overlay.classList.add('show');
+  }, 350);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   FINISH
+   ═══════════════════════════════════════════════════════════ */
+function finish() {
+  state.finished = true;
+  // 제출 대기 시점에 이미 얼려 둔 기록이 있으면 그대로 쓴다.
+  // (setAwaitingSubmit(false)는 endTime을 지우므로 여기서 쓰면 안 된다)
+  if (state.endTime === null) state.endTime = performance.now();
+  state.awaitingSubmit = false;
+  if ($submitHint) $submitHint.classList.remove('show');
+  updateStats();
+
+  const s = computeStats();
+
+  // ── 검정 모드: 라운드 누적 후 다음 지문 자동 진행 or 최종 판정 ──
+  if (examState.active) {
+    examState.strokes += s.correctStrokes;
+    examState.correct += s.correctCount;
+    examState.total += s.totalTyped;
+    examState.timeMs += (state.endTime - state.startTime);
+    // IME 상태 정리 (일반 완료와 동일)
+    isComposing = false;
+    state.composing = null;
+    $hiddenInput.value = '';
+    lastValue = '';
+    $hiddenInput.readOnly = true;
+    if (examState.round < EXAM_ROUNDS) {
+      examState.round++;
+      // 짧은 호흡 후 다음 지문 자동 전개 (overlay 없이)
+      setTimeout(() => {
+        applyText(pickExamText(), `검정 모드 · 지문 ${examState.round} / ${EXAM_ROUNDS} — Esc 취소`);
+        focusInput();
+      }, 700);
+    } else {
+      showExamResult();
+    }
+    return;
+  }
+
+  document.getElementById('finalCpm').innerHTML = `${s.cpm}<span class="s-unit">타</span>`;
+  document.getElementById('finalWpm').textContent = s.wpm;
+  document.getElementById('finalAcc').innerHTML = `${s.acc}<span class="s-unit">%</span>`;
+  document.getElementById('finalCon').textContent = s.consistency !== null ? s.consistency : '—';
+
+  const errorCount = s.totalTyped - s.correctCount;
+  const detail = document.getElementById('completeDetail');
+  detail.innerHTML = `총 <b>${s.totalTyped}</b>글자 입력 중 <b>${s.correctCount}</b>글자 정확 · 오타 <b>${errorCount}</b>회 · 정확 타수 <b>${s.correctStrokes}</b>타` +
+    (s.avgInterval ? ` · 평균 타건 간격 <b>${s.avgInterval}ms</b>` : '');
+
+  // 완료 후 처리:
+  // 1) IME 조합 상태를 완전히 정리 (가로채기 방지)
+  // 2) hidden input value를 비워 IME 조합 대상을 없앰
+  // 3) readOnly로 입력만 막되 포커스는 유지 → Enter/Esc 키가 document로 전달됨
+  //    (버튼에 포커스를 주면 macOS IME 환경에서 키가 가로채여 전환이 안 되는 문제)
+  isComposing = false;
+  state.composing = null;
+  $hiddenInput.value = '';
+  lastValue = '';
+  $hiddenInput.readOnly = true;
+  // 포커스를 완전히 떼어낸다. 포커스된 input이 남아 있으면 macOS 한글 입력기가
+  // IME 컨텍스트를 유지한 채 Enter/Esc를 OS 레벨에서 소비해 버려
+  // 키가 페이지에 도달하지 못한다 (readOnly여도 동일). 포커스된 편집 요소가
+  // 없으면 키는 body로 전달되어 document/window 리스너가 확실히 받는다.
+  $hiddenInput.blur();
+  clearCompleteTimer();
+  completeTimer = setTimeout(() => {
+    completeTimer = null;
+    $overlay.classList.add('show');
+  }, 350);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   EVENT BINDINGS
+   ═══════════════════════════════════════════════════════════ */
+// FN숫자 카테고리 선택 시 우측 힌트를 Fn 레이어 배치도로 전환
+function updateHintPanel() {
+  const isFn = state.category === 'fnlayer';
+  const d = document.getElementById('hintDefault');
+  const f = document.getElementById('hintFnLayer');
+  if (d) d.style.display = isFn ? 'none' : '';
+  if (f) f.style.display = isFn ? '' : 'none';
+}
+
+document.getElementById('categorySelector').addEventListener('click', (e) => {
+  if (e.target.classList.contains('cat-btn')) {
+    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+    e.target.classList.add('active');
+    state.category = e.target.dataset.cat;
+    updateHintPanel();
+    if (state.finished) $overlay.classList.remove('show');
+    loadNewText();
+    focusInput();
+  }
+});
+
+document.getElementById('examBtn').addEventListener('click', () => {
+  startExam();
+});
+
+document.getElementById('newTextBtn').addEventListener('click', () => {
+  if (state.finished) $overlay.classList.remove('show');
+  loadNewText();
+  focusInput();
+});
+document.getElementById('resetBtn').addEventListener('click', () => {
+  if (state.finished) $overlay.classList.remove('show');
+  loadNewText();
+  focusInput();
+});
+// 완료 화면은 Continue 버튼이든 빈 공간이든 클릭하면 진행된다.
+// 버튼 클릭은 오버레이로 버블링되지만 claimEvent가 한 번만 처리되게 한다.
+$overlay.addEventListener('click', (e) => {
+  if (!state.finished) return;
+  if (examState.active && !examState.resultShown) return;  // 검정 라운드 전환 중 보호
+  if (!claimEvent(e)) return;
+  advanceFromComplete();
+});
+
+$soundToggle.addEventListener('click', () => {
+  state.soundOn = !state.soundOn;
+  $soundToggle.innerHTML = state.soundOn ? 'Sound <kbd>[ON]</kbd>' : 'Sound <kbd>[OFF]</kbd>';
+  if (state.soundOn) initAudio();
+  focusInput();
+});
+
+window.addEventListener('resize', () => {
+  resizeCanvas();
+  drawWaveform();
+  updateCursor();
+});
+
+/* ═══════════════════════════════════════════════════════════
+   INIT
+   ═══════════════════════════════════════════════════════════ */
+resizeCanvas();
+updateHintPanel();
+loadNewText();
+setTimeout(() => focusInput(), 120);
+
+// 실시간 통계 틱커: 진행 중에는 키 입력이 없어도 타수가 실시간 반영됨
+setInterval(() => {
+  if (state.startTime !== null && !state.finished) updateStats();
+}, 500);
+
+
+/* ═══════════════════════════════════════════════════════════
+   PWA — 서비스워커 등록
+   http(s)로 열렸을 때만 등록한다. 파일을 더블클릭해 file://로 열면
+   서비스워커를 쓸 수 없으므로 건너뛰고, 앱은 그대로 동작한다.
+   ═══════════════════════════════════════════════════════════ */
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {
+      // 등록 실패해도 타자 연습 자체에는 영향 없음
+    });
+  });
+}
+
+</script>
+</body>
+</html>
